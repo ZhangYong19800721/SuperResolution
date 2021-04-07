@@ -4,6 +4,7 @@
 # step04_Train.py
 # train the UHD_WGANGP model, include parameters initializing
 ########################################################################################################################
+from sys import argv
 import random
 import time
 import torch
@@ -17,23 +18,25 @@ import Data
 import tools
 
 if __name__ == '__main__':
+    script, _dataroot, _select_rows, _select_cols, _NGPU, _B_EPOCHS, _N_EPOCHS = argv
+
     ## set the hyper parameters
     manualSeed = 997
     random.seed(manualSeed)
     torch.manual_seed(manualSeed)
 
     DEBUG = True
-    N_GPU = 2  # we have 2 GPUs
-    B_EPOCHS, N_EPOCHS = 0, 200  # train the model for n epochs
+    N_GPU = int(_NGPU)  # we have 2 GPUs
+    B_EPOCHS, N_EPOCHS = int(_B_EPOCHS), int(_N_EPOCHS)  # train the model for n epochs
     learn_rate = 0.0005  # set the learning rate
     image_H, image_W = 128 * 8, 128 * 14
     minibatch_size = 4  # set the minibatch size
     isLoadPretrainedD = False
     MAX_MINIBATCH_NUM = int(1e10)
-    selected_rows, selected_cols = 8, 14
+    selected_rows, selected_cols = int(_select_rows), int(_select_cols)
 
     ## set the data set
-    dataroot = "/home/zhangyong/Data/image2160x3840"
+    dataroot = _dataroot
     dataset = dset.ImageFolder(root=dataroot, transform=transforms.Compose([transforms.Resize((image_H, image_W))]))
     dataLoader = Data.DataLoader(dataset, minibatch_size=minibatch_size, row=selected_rows, col=selected_cols, shuffle=True)
     minibatch_count = min(MAX_MINIBATCH_NUM, len(dataLoader))
@@ -61,7 +64,7 @@ if __name__ == '__main__':
     if isLoadPretrainedD:
         ##########################################################################
         ## load the pretrained D model
-        modelD_file = open("model/model_PretrainD_SP_CPU_000.pkl", "rb")  # open the model file
+        modelD_file = open("model/model_PretrainD_SP_CPU_001.pkl", "rb")  # open the model file
         D = pickle.load(modelD_file)  # load the model file
         if isinstance(D, nn.DataParallel):
             D = D.module
@@ -121,13 +124,13 @@ if __name__ == '__main__':
 
             if minibatch_id % 500 == 0:
                 # save model every 500 iteration
-                model_D_file = open(r"./model/model_PretrainD_CPU_%03d.pkl" % epoch, "wb")
+                model_D_file = open(r"./model/model_PretrainD_SP_CPU_%03d.pkl" % epoch, "wb")
                 pickle.dump(D.to("cpu"), model_D_file)
                 D.to(device)
                 model_D_file.close()
 
         # save model every epoch
-        model_D_file = open(r"./model/model_PretrainD_CPU_%03d.pkl" % epoch, "wb")
+        model_D_file = open(r"./model/model_PretrainD_SP_CPU_%03d.pkl" % epoch, "wb")
         pickle.dump(D.to("cpu"), model_D_file)
         D.to(device)
         model_D_file.close()

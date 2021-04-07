@@ -18,7 +18,7 @@ import Data
 import tools
 
 if __name__ == '__main__':
-    script, _dataroot, _select_rows, _select_cols, _NGPU = argv
+    script, _dataroot, _select_rows, _select_cols, _NGPU, _B_EPOCHS, _N_EPOCHS = argv
 
     ## set the hyper parameters
     manualSeed = 997
@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     DEBUG = True
     N_GPU = int(_NGPU)  # we have 2 GPUs
-    B_EPOCHS, N_EPOCHS = 0, 200  # train the model for n epochs
+    B_EPOCHS, N_EPOCHS = int(_B_EPOCHS), int(_N_EPOCHS)  # train the model for n epochs
     learn_rate = 0.0005  # set the learning rate
     image_H, image_W = 128 * 8, 128 * 14
     minibatch_size = 1  # set the minibatch size

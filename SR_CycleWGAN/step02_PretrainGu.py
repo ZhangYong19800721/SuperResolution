@@ -3,6 +3,7 @@
 ########################################################################################################################
 # step02_PretrainG.py
 ########################################################################################################################
+from sys import argv
 import random
 import time
 import torch
@@ -16,22 +17,24 @@ import Data
 import tools
 
 if __name__ == '__main__':
+    script, _dataroot, _select_rows, _select_cols, _NGPU, _B_EPOCHS, _N_EPOCHS = argv
+
     ## set the hyper parameters
     manualSeed = 998
     random.seed(manualSeed)
     torch.manual_seed(manualSeed)
 
     DEBUG = True
-    N_GPU = 2  # we have 2 GPUs
-    B_EPOCHS, N_EPOCHS = 0, 200  # train the model for n epochs
+    N_GPU = int(_NGPU)  # we have 2 GPUs
+    B_EPOCHS, N_EPOCHS = int(_B_EPOCHS), int(_N_EPOCHS)  # train the model for n epochs
     learn_rate = 0.0005  # set the learning rate
     image_H, image_W = 128 * 8, 128 * 14
     minibatch_size = 1  # set the minibatch size
     MAX_MINIBATCH_NUM = int(1e10)
-    select_rows, select_cols = 8, 12
+    select_rows, select_cols = int(_select_rows), int(_select_cols)
 
     ## set the data set
-    dataroot = "/home/zhangyong/Data/image2160x3840"
+    dataroot = _dataroot
     dataset = dset.ImageFolder(root=dataroot, transform=transforms.Compose([transforms.Resize((image_H, image_W))]))
     dataLoader = Data.DataLoader(dataset, minibatch_size=minibatch_size, row=select_rows, col=select_cols, shuffle=True)
     minibatch_count = min(MAX_MINIBATCH_NUM, len(dataLoader))

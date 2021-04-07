@@ -18,7 +18,7 @@ import Data
 import tools
 
 if __name__ == '__main__':
-    script, _dataroot, _select_rows, _select_cols, _NGPU = argv
+    script, _dataroot, _select_rows, _select_cols, _NGPU, _B_EPOCHS, _N_EPOCHS = argv
 
     ## set the hyper parameters
     manualSeed = 989
@@ -27,11 +27,11 @@ if __name__ == '__main__':
 
     DEBUG = True
     N_GPU = int(_NGPU)  # we have 2 GPUs
-    B_EPOCHS, N_EPOCHS = 0, 200  # train the model for n epochs
+    B_EPOCHS, N_EPOCHS = int(_B_EPOCHS), int(_N_EPOCHS)  # train the model for n epochs
     learn_rate = 0.0005  # set the learning rate
     image_H, image_W = 128 * 8, 128 * 14
     minibatch_size = 1  # set the minibatch size
-    isLoadPretrainedGu, isLoadPretrainedGd, isLoadPretrainedD = False, False, False
+    isLoadPretrainedGu, isLoadPretrainedGd, isLoadPretrainedD = True, True, False
     MAX_MINIBATCH_NUM = int(1e10)
     select_rows, select_cols = int(_select_rows), int(_select_cols)
 
@@ -56,7 +56,7 @@ if __name__ == '__main__':
     if isLoadPretrainedGu:
         ##########################################################################
         ## load the pretrained G model
-        modelGu_file = open("./model/model_Gu_CPU_022.pkl", "rb")  # open the model file
+        modelGu_file = open("./model/model_PretrainGu_CPU_002.pkl", "rb")  # open the model file
         Gu = pickle.load(modelGu_file)  # load the model file
         if isinstance(Gu, nn.DataParallel):
             Gu = Gu.module
@@ -164,7 +164,7 @@ if __name__ == '__main__':
             V_AVE_MMSE_S = AVE_MMSE_S.expma(loss_recon_mmse.mean().item())
             V_AVE_MMSE_L = AVE_MMSE_L.expma(loss_recon_mmse.mean().item())
 
-            message = "Epoch: %5d, MinibatchID: %5d/%05d, DIFF:% 12.10f[s=% 12.10f], REAL: % 12.10f[s=% 12.10f], FAKE: % 12.10f[s=% 12.10f], GRDP: % 12.10f[s=% 12.10f], MMSE: % 12.10f[s=% 12.10f]" % (
+            message = "Epoch: %5d, MinibatchID: %5d/%05d, DIFF:% 10.12f[s=% 10.12f], REAL: % 10.12f[s=% 10.12f], FAKE: % 10.12f[s=% 10.12f], GRDP: % 10.12f[s=% 10.12f], MMSE: % 10.12f[s=% 10.12f]" % (
                 epoch, minibatch_id, minibatch_count,
                 V_AVE_DIFF_L, V_AVE_DIFF_S, V_AVE_REAL_L, V_AVE_REAL_S, V_AVE_FAKE_L, V_AVE_FAKE_S, V_AVE_GRDP_L, V_AVE_GRDP_S, V_AVE_MMSE_L, V_AVE_MMSE_S
             )
