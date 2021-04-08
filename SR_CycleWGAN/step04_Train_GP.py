@@ -16,12 +16,14 @@ import torchvision.transforms as transforms
 import Model
 import Data
 import tools
+from torch.utils.tensorboard import SummaryWriter
 
 if __name__ == '__main__':
     script, _dataroot, _select_rows, _select_cols, _NGPU, _B_EPOCHS, _N_EPOCHS = argv
+    writer = SummaryWriter("./logdir/Train_log_1")
 
     ## set the hyper parameters
-    manualSeed = 989
+    manualSeed = 988
     random.seed(manualSeed)
     torch.manual_seed(manualSeed)
 
@@ -31,7 +33,7 @@ if __name__ == '__main__':
     learn_rate = 0.0005  # set the learning rate
     image_H, image_W = 128 * 8, 128 * 14
     minibatch_size = 1  # set the minibatch size
-    isLoadPretrainedGu, isLoadPretrainedGd, isLoadPretrainedD = True, True, False
+    isLoadPretrainedGu, isLoadPretrainedGd, isLoadPretrainedD = True, True, True
     MAX_MINIBATCH_NUM = int(1e10)
     select_rows, select_cols = int(_select_rows), int(_select_cols)
 
@@ -56,7 +58,7 @@ if __name__ == '__main__':
     if isLoadPretrainedGu:
         ##########################################################################
         ## load the pretrained G model
-        modelGu_file = open("./model/model_PretrainGu_CPU_002.pkl", "rb")  # open the model file
+        modelGu_file = open("./model/model_Gu_CPU_000.pkl", "rb")  # open the model file
         Gu = pickle.load(modelGu_file)  # load the model file
         if isinstance(Gu, nn.DataParallel):
             Gu = Gu.module
@@ -69,7 +71,7 @@ if __name__ == '__main__':
     if isLoadPretrainedGd:
         ##########################################################################
         ## load the pretrained G model
-        modelGd_file = open("./model/model_PretrainGd_CPU_005.pkl", "rb")  # open the model file
+        modelGd_file = open("./model/model_Gd_CPU_000.pkl", "rb")  # open the model file
         Gd = pickle.load(modelGd_file)  # load the model file
         if isinstance(Gd, nn.DataParallel):
             Gd = Gd.module
@@ -82,7 +84,7 @@ if __name__ == '__main__':
     if isLoadPretrainedD:
         ##########################################################################
         ## load the pretrained Db model
-        modelD_file = open("model/model_PretrainD_GP_CPU_000.pkl", "rb")  # open the model file
+        modelD_file = open("model/model_D_GP_CPU_000.pkl", "rb")  # open the model file
         D = pickle.load(modelD_file)  # load the model file
         if isinstance(D, nn.DataParallel):
             D = D.module
@@ -170,11 +172,22 @@ if __name__ == '__main__':
             )
             print(message)
 
+            writer.add_scalar("V_AVE_DIFF_L", V_AVE_DIFF_L, minibatch_count * (epoch-B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_DIFF_S", V_AVE_DIFF_S, minibatch_count * (epoch-B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_REAL_L", V_AVE_REAL_L, minibatch_count * (epoch-B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_REAL_S", V_AVE_REAL_S, minibatch_count * (epoch-B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_FAKE_L", V_AVE_FAKE_L, minibatch_count * (epoch-B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_FAKE_S", V_AVE_FAKE_S, minibatch_count * (epoch-B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_GRDP_L", V_AVE_GRDP_L, minibatch_count * (epoch-B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_GRDP_S", V_AVE_GRDP_S, minibatch_count * (epoch-B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_MMSE_L", V_AVE_MMSE_L, minibatch_count * (epoch-B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_MMSE_S", V_AVE_MMSE_S, minibatch_count * (epoch-B_EPOCHS) + minibatch_id)
+
             if minibatch_id % 500 == 0:
                 # save model every 1000 iteration
                 model_Gu_file = open(r"./model/model_Gu_CPU_%03d.pkl" % epoch, "wb")
                 model_Gd_file = open(r"./model/model_Gd_CPU_%03d.pkl" % epoch, "wb")
-                model_D_file = open(r"./model/model_D_CPU_%03d.pkl" % epoch, "wb")
+                model_D_file = open(r"./model/model_D_GP_CPU_%03d.pkl" % epoch, "wb")
                 pickle.dump(Gu.to("cpu"), model_Gu_file)
                 pickle.dump(Gd.to("cpu"), model_Gd_file)
                 pickle.dump(D.to("cpu"), model_D_file)
@@ -188,7 +201,7 @@ if __name__ == '__main__':
         # save model every epoch
         model_Gu_file = open(r"./model/model_Gu_CPU_%03d.pkl" % epoch, "wb")
         model_Gd_file = open(r"./model/model_Gd_CPU_%03d.pkl" % epoch, "wb")
-        model_D_file = open(r"./model/model_D_CPU_%03d.pkl" % epoch, "wb")
+        model_D_file = open(r"./model/model_D_GP_CPU_%03d.pkl" % epoch, "wb")
         pickle.dump(Gu.to("cpu"), model_Gu_file)
         pickle.dump(Gd.to("cpu"), model_Gd_file)
         pickle.dump(D.to("cpu"), model_D_file)
