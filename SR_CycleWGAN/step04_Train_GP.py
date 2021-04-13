@@ -4,7 +4,7 @@
 # step04_Train.py
 # train the UHD_GP_WGAN model, include parameters initializing
 ########################################################################################################################
-from sys import argv
+import argparse
 import random
 import time
 import torch
@@ -19,8 +19,22 @@ import tools
 from torch.utils.tensorboard import SummaryWriter
 
 if __name__ == '__main__':
-    script, _dataroot, _select_rows, _select_cols, _NGPU, _B_EPOCHS, _N_EPOCHS = argv
-    writer = SummaryWriter("./logdir/Train_log_1")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataroot", type=str, help="The root dir for dataset")
+    parser.add_argument("--learn_rate", type=float, help="The learn rate")
+    parser.add_argument("--minibatch_size", type=int, help="The learn rate")
+    parser.add_argument("--select_rows", type=int, help="The frame is cut into 8x14 patches, select how many rows to use")
+    parser.add_argument("--select_cols", type=int, help="The frame is cut into 8x14 patches, select how many cols to use")
+    parser.add_argument("--NGPU", type=int, help="specify the number of GPUs to use")
+    parser.add_argument("--B_EPOCHS", type=int, help="The start epoch id")
+    parser.add_argument("--N_EPOCHS", type=int, help="The end epoch id")
+    parser.add_argument("--isLoadPretrainedGu", type=str, help="None or the path for pretrained Gu model")
+    parser.add_argument("--isLoadPretrainedGd", type=str, help="None or the path for pretrained Gd model")
+    parser.add_argument("--isLoadPretrainedD", type=str, help="None or the path for pretrained D model")
+    parser.add_argument("--logdir", type=str, help="The log dir")
+    args = parser.parse_args()
+
+    writer = SummaryWriter(args.logdir + "/Train_log_1")
 
     ## set the hyper parameters
     manualSeed = 988
@@ -28,17 +42,17 @@ if __name__ == '__main__':
     torch.manual_seed(manualSeed)
 
     DEBUG = True
-    N_GPU = int(_NGPU)  # we have 2 GPUs
-    B_EPOCHS, N_EPOCHS = int(_B_EPOCHS), int(_N_EPOCHS)  # train the model for n epochs
-    learn_rate = 0.0005  # set the learning rate
+    N_GPU = args.NGPU  # we have 2 GPUs
+    B_EPOCHS, N_EPOCHS = args.B_EPOCHS, args.N_EPOCHS  # train the model for n epochs
+    learn_rate = args.learn_rate  # set the learning rate
     image_H, image_W = 128 * 8, 128 * 14
-    minibatch_size = 1  # set the minibatch size
-    isLoadPretrainedGu, isLoadPretrainedGd, isLoadPretrainedD = True, True, True
+    minibatch_size = args.minibatch_size  # set the minibatch size
+    isLoadPretrainedGu, isLoadPretrainedGd, isLoadPretrainedD = args.isLoadPretrainedGu, args.isLoadPretrainedGd, args.isLoadPretrainedD
     MAX_MINIBATCH_NUM = int(1e10)
-    select_rows, select_cols = int(_select_rows), int(_select_cols)
+    select_rows, select_cols = args.select_rows, args.select_cols
 
     ## set the data set
-    dataroot = _dataroot
+    dataroot = args.dataroot
     dataset = dset.ImageFolder(root=dataroot, transform=transforms.Compose([transforms.Resize((image_H, image_W))]))
     dataLoader = Data.DataLoader(dataset, minibatch_size=minibatch_size, row=select_rows, col=select_cols, shuffle=True)
     minibatch_count = min(MAX_MINIBATCH_NUM, len(dataLoader))
@@ -58,7 +72,7 @@ if __name__ == '__main__':
     if isLoadPretrainedGu:
         ##########################################################################
         ## load the pretrained G model
-        modelGu_file = open("./model/model_Gu_CPU_000.pkl", "rb")  # open the model file
+        modelGu_file = open(isLoadPretrainedGu, "rb")  # open the model file
         Gu = pickle.load(modelGu_file)  # load the model file
         if isinstance(Gu, nn.DataParallel):
             Gu = Gu.module
@@ -71,7 +85,7 @@ if __name__ == '__main__':
     if isLoadPretrainedGd:
         ##########################################################################
         ## load the pretrained G model
-        modelGd_file = open("./model/model_Gd_CPU_000.pkl", "rb")  # open the model file
+        modelGd_file = open(isLoadPretrainedGd, "rb")  # open the model file
         Gd = pickle.load(modelGd_file)  # load the model file
         if isinstance(Gd, nn.DataParallel):
             Gd = Gd.module
@@ -84,7 +98,7 @@ if __name__ == '__main__':
     if isLoadPretrainedD:
         ##########################################################################
         ## load the pretrained Db model
-        modelD_file = open("model/model_D_GP_CPU_000.pkl", "rb")  # open the model file
+        modelD_file = open(isLoadPretrainedD, "rb")  # open the model file
         D = pickle.load(modelD_file)  # load the model file
         if isinstance(D, nn.DataParallel):
             D = D.module
@@ -98,9 +112,9 @@ if __name__ == '__main__':
     MSE = nn.MSELoss(reduction='mean')
 
     # Setup Adam optimizers for both G and D
-    optimizerD = optim.Adam(D.parameters(), lr=1.0 * learn_rate, betas=(0.9, 0.999))
-    optimizerGu = optim.Adam(Gu.parameters(), lr=1.0 * learn_rate, betas=(0.9, 0.999))
-    optimizerGd = optim.Adam(Gd.parameters(), lr=1.0 * learn_rate, betas=(0.9, 0.999))
+    optimizerD = optim.Adam(D.parameters(), lr=learn_rate, betas=(0.9, 0.999))
+    optimizerGu = optim.Adam(Gu.parameters(), lr=learn_rate, betas=(0.9, 0.999))
+    optimizerGd = optim.Adam(Gd.parameters(), lr=learn_rate, betas=(0.9, 0.999))
 
     ## push models to GPUs
     Gu = Gu.to(device)
@@ -109,7 +123,7 @@ if __name__ == '__main__':
     if device.type == 'cuda' and N_GPU > 1:
         Gu = nn.DataParallel(Gu, list(range(N_GPU)))
         Gd = nn.DataParallel(Gd, list(range(N_GPU)))
-        D  = nn.DataParallel(D,  list(range(N_GPU)))
+        D = nn.DataParallel(D, list(range(N_GPU)))
 
     print("Start to train .... ")
     alpha1, alpha2 = 0.001, 1.000
@@ -121,8 +135,10 @@ if __name__ == '__main__':
     AVE_FAKE_L = tools.EXPMA(alpha1)
     AVE_GRDP_S = tools.EXPMA(alpha2)
     AVE_GRDP_L = tools.EXPMA(alpha1)
-    AVE_MMSE_S = tools.EXPMA(alpha2)
-    AVE_MMSE_L = tools.EXPMA(alpha1)
+    AVE_LMSE_S = tools.EXPMA(alpha2)
+    AVE_LMSE_L = tools.EXPMA(alpha1)
+    AVE_HMSE_S = tools.EXPMA(alpha2)
+    AVE_HMSE_L = tools.EXPMA(alpha1)
 
     # leakyRELU = nn.LeakyReLU(0.0)
     for epoch in range(B_EPOCHS, N_EPOCHS):
@@ -150,38 +166,48 @@ if __name__ == '__main__':
             RLR = Gd(ISR)
             output_fake_G_D = D(ISR)
             loss_recon_mmse = MSE(ILR, RLR)
-            loss_G_D = -output_fake_G_D.mean() + loss_recon_mmse
+            loss_optim_mmse = MSE(ISR, IHR)
+            loss_G_D = -output_fake_G_D.mean() + loss_recon_mmse + 1e-3 * loss_optim_mmse
             loss_G_D.backward()
             optimizerGu.step()  # Update Gu parameters
             optimizerGd.step()  # Update Gd parameters
 
             V_AVE_DIFF_S = AVE_DIFF_S.expma(diff.item())
-            V_AVE_DIFF_L = AVE_DIFF_L.expma(diff.item())
+            V_AVE_DIFF_L = AVE_DIFF_L.expma(abs(diff.item()))
             V_AVE_REAL_S = AVE_REAL_S.expma(output_real_D.mean().item())
             V_AVE_REAL_L = AVE_REAL_L.expma(output_real_D.mean().item())
             V_AVE_FAKE_S = AVE_FAKE_S.expma(output_fake_D.mean().item())
             V_AVE_FAKE_L = AVE_FAKE_L.expma(output_fake_D.mean().item())
             V_AVE_GRDP_S = AVE_GRDP_S.expma(gradient_penalty.mean().item())
             V_AVE_GRDP_L = AVE_GRDP_L.expma(gradient_penalty.mean().item())
-            V_AVE_MMSE_S = AVE_MMSE_S.expma(loss_recon_mmse.mean().item())
-            V_AVE_MMSE_L = AVE_MMSE_L.expma(loss_recon_mmse.mean().item())
+            V_AVE_LMSE_S = AVE_LMSE_S.expma(loss_recon_mmse.mean().item())
+            V_AVE_LMSE_L = AVE_LMSE_L.expma(loss_recon_mmse.mean().item())
+            V_AVE_HMSE_S = AVE_HMSE_S.expma(loss_optim_mmse.mean().item())
+            V_AVE_HMSE_L = AVE_HMSE_L.expma(loss_optim_mmse.mean().item())
 
-            message = "Epoch: %5d, MinibatchID: %5d/%05d, DIFF:% 10.12f[s=% 10.12f], REAL: % 10.12f[s=% 10.12f], FAKE: % 10.12f[s=% 10.12f], GRDP: % 10.12f[s=% 10.12f], MMSE: % 10.12f[s=% 10.12f]" % (
+            message = "Epoch:%3d, MinibatchID:%5d/%05d, DIFF:% 6.12f[% 6.12f], REAL: % 6.12f[% 6.12f], FAKE: % 6.12f[% 6.12f], GRDP: % 6.12f[% 6.12f], LMSE: % 6.12f[% 6.12f], HMSE: % 6.12f[% 6.12f]" % (
                 epoch, minibatch_id, minibatch_count,
-                V_AVE_DIFF_L, V_AVE_DIFF_S, V_AVE_REAL_L, V_AVE_REAL_S, V_AVE_FAKE_L, V_AVE_FAKE_S, V_AVE_GRDP_L, V_AVE_GRDP_S, V_AVE_MMSE_L, V_AVE_MMSE_S
+                V_AVE_DIFF_L, V_AVE_DIFF_S,
+                V_AVE_REAL_L, V_AVE_REAL_S,
+                V_AVE_FAKE_L, V_AVE_FAKE_S,
+                V_AVE_GRDP_L, V_AVE_GRDP_S,
+                V_AVE_LMSE_L, V_AVE_LMSE_S,
+                V_AVE_HMSE_L, V_AVE_HMSE_S
             )
             print(message)
 
-            writer.add_scalar("V_AVE_DIFF_L", V_AVE_DIFF_L, minibatch_count * (epoch-B_EPOCHS) + minibatch_id)
-            writer.add_scalar("V_AVE_DIFF_S", V_AVE_DIFF_S, minibatch_count * (epoch-B_EPOCHS) + minibatch_id)
-            writer.add_scalar("V_AVE_REAL_L", V_AVE_REAL_L, minibatch_count * (epoch-B_EPOCHS) + minibatch_id)
-            writer.add_scalar("V_AVE_REAL_S", V_AVE_REAL_S, minibatch_count * (epoch-B_EPOCHS) + minibatch_id)
-            writer.add_scalar("V_AVE_FAKE_L", V_AVE_FAKE_L, minibatch_count * (epoch-B_EPOCHS) + minibatch_id)
-            writer.add_scalar("V_AVE_FAKE_S", V_AVE_FAKE_S, minibatch_count * (epoch-B_EPOCHS) + minibatch_id)
-            writer.add_scalar("V_AVE_GRDP_L", V_AVE_GRDP_L, minibatch_count * (epoch-B_EPOCHS) + minibatch_id)
-            writer.add_scalar("V_AVE_GRDP_S", V_AVE_GRDP_S, minibatch_count * (epoch-B_EPOCHS) + minibatch_id)
-            writer.add_scalar("V_AVE_MMSE_L", V_AVE_MMSE_L, minibatch_count * (epoch-B_EPOCHS) + minibatch_id)
-            writer.add_scalar("V_AVE_MMSE_S", V_AVE_MMSE_S, minibatch_count * (epoch-B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_DIFF_L", V_AVE_DIFF_L, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_DIFF_S", V_AVE_DIFF_S, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_REAL_L", V_AVE_REAL_L, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_REAL_S", V_AVE_REAL_S, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_FAKE_L", V_AVE_FAKE_L, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_FAKE_S", V_AVE_FAKE_S, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_GRDP_L", V_AVE_GRDP_L, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_GRDP_S", V_AVE_GRDP_S, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_LMSE_L", V_AVE_LMSE_L, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_LMSE_S", V_AVE_LMSE_S, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_HMSE_L", V_AVE_HMSE_L, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
+            writer.add_scalar("V_AVE_HMSE_S", V_AVE_HMSE_S, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
 
             if minibatch_id % 500 == 0:
                 # save model every 1000 iteration
