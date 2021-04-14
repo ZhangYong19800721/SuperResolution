@@ -256,7 +256,35 @@ def cal_gradient_penalty(D, device, real_samples, fake_samples):
                               create_graph=True, retain_graph=True, only_inputs=True)[0]
 
     # 利用梯度计算出gradient penalty
-    gradient_penalty = ((gradients.norm(2, dim=(1,2,3)) - 1) ** 2).mean()
+    gradient_penalty = ((gradients.norm(2, dim=(1, 2, 3)) - 1) ** 2).mean()
+    return gradient_penalty
+
+# compute the gradient penalty
+def compute_gradient_penalty(D, device, real_samples, fake_samples):
+    # weight alpha
+    N = real_samples.size(0)
+    C = real_samples.size(1)
+    H = real_samples.size(2)
+    W = real_samples.size(3)
+
+    alpha = torch.rand(N, 1)
+    alpha = alpha.expand((-1, C * H * W)).reshape((N, C, H, W))
+    alpha = alpha.to(device)
+
+    # calculate interpolates
+    interpolates = alpha * real_samples + ((1 - alpha) * fake_samples)
+
+    # want to get the gradient, calculate the Discriminator's output firstly
+    interpolates = autograd.Variable(interpolates, requires_grad=True)
+    disc_interpolates = D(interpolates)
+
+    # 计算梯度
+    gradients = autograd.grad(outputs=disc_interpolates, inputs=interpolates,
+                              grad_outputs=torch.ones(disc_interpolates.size()).to(device),
+                              create_graph=True, retain_graph=True, only_inputs=True)[0]
+
+    # 利用梯度计算出gradient penalty
+    gradient_penalty = torch.relu(gradients.norm(2, dim=(1, 2, 3)) - 0.95).mean()
     return gradient_penalty
 
 
