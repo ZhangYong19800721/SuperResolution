@@ -126,17 +126,11 @@ if __name__ == '__main__':
         D = nn.DataParallel(D, list(range(N_GPU)))
 
     print("Start to train .... ")
-    alpha1, alpha2 = 0.001, 1.000
-    AVE_DIFF_S = tools.EXPMA(alpha2)
-    AVE_DIFF_L = tools.EXPMA(alpha1)
-    # AVE_REAL_S = tools.EXPMA(alpha2)
-    # AVE_REAL_L = tools.EXPMA(alpha1)
-    # AVE_FAKE_S = tools.EXPMA(alpha2)
-    # AVE_FAKE_L = tools.EXPMA(alpha1)
-    AVE_LMSE_S = tools.EXPMA(alpha2)
-    AVE_LMSE_L = tools.EXPMA(alpha1)
-    AVE_HMSE_S = tools.EXPMA(alpha2)
-    AVE_HMSE_L = tools.EXPMA(alpha1)
+    alpha = 0.01
+    AVE_DIFF = tools.EXPMA(alpha)
+    AVE_LMSE = tools.EXPMA(alpha)
+    AVE_HMSE = tools.EXPMA(alpha)
+
 
     # leakyRELU = nn.LeakyReLU(0.0)
     for epoch in range(B_EPOCHS, N_EPOCHS):
@@ -169,37 +163,20 @@ if __name__ == '__main__':
             optimizerGu.step()  # Update Gu parameters
             optimizerGd.step()  # Update Gd parameters
 
-            V_AVE_DIFF_S = AVE_DIFF_S.expma(diff.item())
-            V_AVE_DIFF_L = AVE_DIFF_L.expma(abs(diff.item()))
-            # V_AVE_REAL_S = AVE_REAL_S.expma(output_real_D.mean().item())
-            # V_AVE_REAL_L = AVE_REAL_L.expma(output_real_D.mean().item())
-            # V_AVE_FAKE_S = AVE_FAKE_S.expma(output_fake_D.mean().item())
-            # V_AVE_FAKE_L = AVE_FAKE_L.expma(output_fake_D.mean().item())
-            V_AVE_LMSE_S = AVE_LMSE_S.expma(loss_recon_mmse.mean().item())
-            V_AVE_LMSE_L = AVE_LMSE_L.expma(loss_recon_mmse.mean().item())
-            V_AVE_HMSE_S = AVE_HMSE_S.expma(loss_optim_mmse.mean().item())
-            V_AVE_HMSE_L = AVE_HMSE_L.expma(loss_optim_mmse.mean().item())
+            V_AVE_DIFF = AVE_DIFF.expma(abs(diff.item()))
+            V_AVE_LMSE = AVE_LMSE.expma(loss_recon_mmse.mean().item())
+            V_AVE_HMSE = AVE_HMSE.expma(loss_optim_mmse.mean().item())
 
-            message = "Epoch:%3d, MinibatchID:%5d/%05d, DIFF:% 6.12f[% 6.12f], LMSE: % 6.12f[% 6.12f], HMSE: % 6.12f[% 6.12f]" % (
-                epoch, minibatch_id, minibatch_count,
-                V_AVE_DIFF_L, V_AVE_DIFF_S,
-                # V_AVE_REAL_L, V_AVE_REAL_S,
-                # V_AVE_FAKE_L, V_AVE_FAKE_S,
-                V_AVE_LMSE_L, V_AVE_LMSE_S,
-                V_AVE_HMSE_L, V_AVE_HMSE_S
+
+            message = "Epoch:%3d, MinibatchID:%5d/%05d, DIFF:% 6.12f, LMSE: % 6.12f, HMSE: % 6.12f" % (
+                epoch, minibatch_id, minibatch_count, V_AVE_DIFF, V_AVE_LMSE, V_AVE_HMSE
             )
             print(message)
 
-            writer.add_scalar("V_AVE_DIFF_L", V_AVE_DIFF_L, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
-            writer.add_scalar("V_AVE_DIFF_S", V_AVE_DIFF_S, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
-            # writer.add_scalar("V_AVE_REAL_L", V_AVE_REAL_L, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
-            # writer.add_scalar("V_AVE_REAL_S", V_AVE_REAL_S, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
-            # writer.add_scalar("V_AVE_FAKE_L", V_AVE_FAKE_L, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
-            # writer.add_scalar("V_AVE_FAKE_S", V_AVE_FAKE_S, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
-            writer.add_scalar("V_AVE_LMSE_L", V_AVE_LMSE_L, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
-            writer.add_scalar("V_AVE_LMSE_S", V_AVE_LMSE_S, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
-            writer.add_scalar("V_AVE_HMSE_L", V_AVE_HMSE_L, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
-            writer.add_scalar("V_AVE_HMSE_S", V_AVE_HMSE_S, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
+
+            writer.add_scalar("AVE_DIFF", V_AVE_DIFF, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
+            writer.add_scalar("AVE_LMSE", V_AVE_LMSE, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
+            writer.add_scalar("AVE_HMSE", V_AVE_HMSE, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
 
             if minibatch_id % 500 == 0:
                 # save model every 1000 iteration
