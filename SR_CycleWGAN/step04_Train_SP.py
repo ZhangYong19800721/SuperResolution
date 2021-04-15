@@ -168,8 +168,7 @@ if __name__ == '__main__':
             V_AVE_HMSE = AVE_HMSE.expma(loss_optim_mmse.mean().item())
 
             message = "Epoch:%3d, MinibatchID:%5d/%05d, DIFF:% 6.12f, LMSE: % 6.12f, HMSE: % 6.12f" % (
-                epoch, minibatch_id, minibatch_count, V_AVE_DIFF, V_AVE_LMSE, V_AVE_HMSE
-            )
+            epoch, minibatch_id, minibatch_count, V_AVE_DIFF, V_AVE_LMSE, V_AVE_HMSE)
             print(message)
 
             writer.add_scalar("AVE_DIFF", V_AVE_DIFF, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
