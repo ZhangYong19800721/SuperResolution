@@ -34,7 +34,7 @@ if __name__ == '__main__':
     parser.add_argument("--logdir", type=str, help="The log dir")
     args = parser.parse_args()
 
-    writer = SummaryWriter(args.logdir + "/Train_log_1")
+    writer = SummaryWriter(args.logdir + "/Train_Log_" + time.strftime("%Y%m%d[%H:%M:%S]", time.localtime()))
 
     ## set the hyper parameters
     manualSeed = 988
