@@ -20,6 +20,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument("--seed", type=int, help="The manual random seed")
     parser.add_argument("--dataroot", type=str, help="The root dir for dataset")
     parser.add_argument("--learn_rate", type=float, help="The learn rate")
     parser.add_argument("--minibatch_size", type=int, help="The learn rate")
@@ -37,9 +38,9 @@ if __name__ == '__main__':
     writer = SummaryWriter(args.logdir + "/Train_Log_" + time.strftime("%Y%m%d[%H:%M:%S]", time.localtime()))
 
     ## set the hyper parameters
-    manualSeed = 988
-    random.seed(manualSeed)
-    torch.manual_seed(manualSeed)
+    if args.seed != None:
+        random.seed(args.seed)
+        torch.manual_seed(args.seed)
 
     DEBUG = True
     N_GPU = args.NGPU  # we have 2 GPUs
@@ -131,7 +132,6 @@ if __name__ == '__main__':
     AVE_LMSE = tools.EXPMA(alpha)
     AVE_HMSE = tools.EXPMA(alpha)
 
-
     # leakyRELU = nn.LeakyReLU(0.0)
     for epoch in range(B_EPOCHS, N_EPOCHS):
         start_time = time.time()
@@ -167,12 +167,10 @@ if __name__ == '__main__':
             V_AVE_LMSE = AVE_LMSE.expma(loss_recon_mmse.mean().item())
             V_AVE_HMSE = AVE_HMSE.expma(loss_optim_mmse.mean().item())
 
-
             message = "Epoch:%3d, MinibatchID:%5d/%05d, DIFF:% 6.12f, LMSE: % 6.12f, HMSE: % 6.12f" % (
                 epoch, minibatch_id, minibatch_count, V_AVE_DIFF, V_AVE_LMSE, V_AVE_HMSE
             )
             print(message)
-
 
             writer.add_scalar("AVE_DIFF", V_AVE_DIFF, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
             writer.add_scalar("AVE_LMSE", V_AVE_LMSE, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
