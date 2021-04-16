@@ -21,6 +21,8 @@ from torch.utils.tensorboard import SummaryWriter
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, help="The manual random seed")
+    parser.add_argument("--MaxMinibatchID", type=int, help="the Max Minibatch ID, use this to cut the trainset")
+    parser.add_argument("--shuffle", type=int, help="is shuffle the trainset")
     parser.add_argument("--dataroot", type=str, help="The root dir for dataset")
     parser.add_argument("--learn_rate", type=float, help="The learn rate")
     parser.add_argument("--minibatch_size", type=int, help="The learn rate")
@@ -48,13 +50,13 @@ if __name__ == '__main__':
     image_H, image_W = 128 * 8, 128 * 14
     minibatch_size = args.minibatch_size  # set the minibatch size
     isLoadPretrainedGu, isLoadPretrainedD = args.isLoadPretrainedGu, args.isLoadPretrainedD
-    MAX_MINIBATCH_NUM = int(1e10)
+    MAX_MINIBATCH_NUM = args.MaxMinibatchID if args.MaxMinibatchID != None else 1e100
     select_rows, select_cols = args.select_rows, args.select_cols
 
     ## set the data set
     dataroot = args.dataroot
     dataset = dset.ImageFolder(root=dataroot, transform=transforms.Compose([transforms.Resize((image_H, image_W))]))
-    dataLoader = Data.DataLoader(dataset, minibatch_size=minibatch_size, row=select_rows, col=select_cols, shuffle=True)
+    dataLoader = Data.DataLoader(dataset, minibatch_size=minibatch_size, row=select_rows, col=select_cols, shuffle=True if args.shuffle else False)
     minibatch_count = min(MAX_MINIBATCH_NUM, len(dataLoader))
 
     ## specify the computing device
@@ -147,13 +149,14 @@ if __name__ == '__main__':
                 epoch, minibatch_id, minibatch_count, V_AVE_DIFF, V_AVE_MMSE)
             print(message)
 
-            writer.add_scalar("AVE_DIFF", V_AVE_DIFF, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
-            writer.add_scalar("AVE_MMSE", V_AVE_MMSE, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
+            istep = minibatch_count * (epoch - B_EPOCHS) + minibatch_id
+            writer.add_scalar("AVE_DIFF", V_AVE_DIFF, istep)
+            writer.add_scalar("AVE_MMSE", V_AVE_MMSE, istep)
 
-            if minibatch_id % 500 == 0:
+            if istep % 500 == 0:
                 # save model every 1000 iteration
-                model_Gu_file = open(r"./model/model_Gu_CPU_%03d.pkl" % epoch, "wb")
-                model_D_file = open(r"./model/model_D_SP_CPU_%03d.pkl" % epoch, "wb")
+                model_Gu_file = open(r"./model/model_Gu_CPU_%05d.pkl" % epoch, "wb")
+                model_D_file = open(r"./model/model_D_SP_CPU_%05d.pkl" % epoch, "wb")
                 pickle.dump(Gu.to("cpu"), model_Gu_file)
                 pickle.dump(D.to("cpu"), model_D_file)
                 Gu.to(device)
@@ -161,14 +164,5 @@ if __name__ == '__main__':
                 model_Gu_file.close()
                 model_D_file.close()
 
-        # save model every epoch
-        model_Gu_file = open(r"./model/model_Gu_CPU_%03d.pkl" % epoch, "wb")
-        model_D_file = open(r"./model/model_D_SP_CPU_%03d.pkl" % epoch, "wb")
-        pickle.dump(Gu.to("cpu"), model_Gu_file)
-        pickle.dump(D.to("cpu"), model_D_file)
-        Gu.to(device)
-        D.to(device)
-        model_Gu_file.close()
-        model_D_file.close()
         end_time = time.time()
         print(f'train_time_for_epoch = {(end_time - start_time) / 60} min')
