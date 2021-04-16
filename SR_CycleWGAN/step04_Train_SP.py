@@ -192,18 +192,5 @@ if __name__ == '__main__':
                 model_Gd_file.close()
                 model_D_file.close()
 
-        # save model every epoch
-        model_Gu_file = open(r"./model/model_Gu_CPU_%05d.pkl" % epoch, "wb")
-        model_Gd_file = open(r"./model/model_Gd_CPU_%05d.pkl" % epoch, "wb")
-        model_D_file = open(r"./model/model_D_SP_CPU_%05d.pkl" % epoch, "wb")
-        pickle.dump(Gu.to("cpu"), model_Gu_file)
-        pickle.dump(Gd.to("cpu"), model_Gd_file)
-        pickle.dump(D.to("cpu"), model_D_file)
-        Gu.to(device)
-        Gd.to(device)
-        D.to(device)
-        model_Gu_file.close()
-        model_Gd_file.close()
-        model_D_file.close()
         end_time = time.time()
         print(f'train_time_for_epoch = {(end_time - start_time) / 60} min')
