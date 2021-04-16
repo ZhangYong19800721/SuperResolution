@@ -179,9 +179,9 @@ if __name__ == '__main__':
 
             if minibatch_id % 500 == 0:
                 # save model every 1000 iteration
-                model_Gu_file = open(r"./model/model_Gu_CPU_%03d.pkl" % epoch, "wb")
-                model_Gd_file = open(r"./model/model_Gd_CPU_%03d.pkl" % epoch, "wb")
-                model_D_file = open(r"./model/model_D_SP_CPU_%03d.pkl" % epoch, "wb")
+                model_Gu_file = open(r"./model/model_Gu_CPU_%05d.pkl" % epoch, "wb")
+                model_Gd_file = open(r"./model/model_Gd_CPU_%05d.pkl" % epoch, "wb")
+                model_D_file = open(r"./model/model_D_SP_CPU_%05d.pkl" % epoch, "wb")
                 pickle.dump(Gu.to("cpu"), model_Gu_file)
                 pickle.dump(Gd.to("cpu"), model_Gd_file)
                 pickle.dump(D.to("cpu"), model_D_file)
@@ -193,9 +193,9 @@ if __name__ == '__main__':
                 model_D_file.close()
 
         # save model every epoch
-        model_Gu_file = open(r"./model/model_Gu_CPU_%03d.pkl" % epoch, "wb")
-        model_Gd_file = open(r"./model/model_Gd_CPU_%03d.pkl" % epoch, "wb")
-        model_D_file = open(r"./model/model_D_SP_CPU_%03d.pkl" % epoch, "wb")
+        model_Gu_file = open(r"./model/model_Gu_CPU_%05d.pkl" % epoch, "wb")
+        model_Gd_file = open(r"./model/model_Gd_CPU_%05d.pkl" % epoch, "wb")
+        model_D_file = open(r"./model/model_D_SP_CPU_%05d.pkl" % epoch, "wb")
         pickle.dump(Gu.to("cpu"), model_Gu_file)
         pickle.dump(Gd.to("cpu"), model_Gd_file)
         pickle.dump(D.to("cpu"), model_D_file)
