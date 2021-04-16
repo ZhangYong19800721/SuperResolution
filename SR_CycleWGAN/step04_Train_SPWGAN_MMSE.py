@@ -141,14 +141,14 @@ if __name__ == '__main__':
             optimizerGu.step()  # Update Gu parameters
 
             V_AVE_DIFF = AVE_DIFF.expma(abs(diff.item()))
-            V_AVE_HMSE = AVE_MMSE.expma(loss_optim_mmse.mean().item())
+            V_AVE_MMSE = AVE_MMSE.expma(loss_optim_mmse.mean().item())
 
             message = "Epoch:%3d, MinibatchID:%5d/%05d, DIFF:% 6.12f, HMSE: % 6.12f" % (
-            epoch, minibatch_id, minibatch_count, V_AVE_DIFF, V_AVE_HMSE)
+                epoch, minibatch_id, minibatch_count, V_AVE_DIFF, V_AVE_MMSE)
             print(message)
 
             writer.add_scalar("AVE_DIFF", V_AVE_DIFF, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
-            writer.add_scalar("AVE_HMSE", V_AVE_HMSE, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
+            writer.add_scalar("AVE_MMSE", V_AVE_MMSE, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
 
             if minibatch_id % 500 == 0:
                 # save model every 1000 iteration
