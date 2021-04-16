@@ -21,6 +21,7 @@ from torch.utils.tensorboard import SummaryWriter
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, help="The manual random seed")
+    parser.add_argument("--MaxMinibatchID", type=int, help="the Max Minibatch ID, use this to cut the trainset")
     parser.add_argument("--dataroot", type=str, help="The root dir for dataset")
     parser.add_argument("--learn_rate", type=float, help="The learn rate")
     parser.add_argument("--minibatch_size", type=int, help="The learn rate")
@@ -49,7 +50,7 @@ if __name__ == '__main__':
     image_H, image_W = 128 * 8, 128 * 14
     minibatch_size = args.minibatch_size  # set the minibatch size
     isLoadPretrainedGu, isLoadPretrainedGd, isLoadPretrainedD = args.isLoadPretrainedGu, args.isLoadPretrainedGd, args.isLoadPretrainedD
-    MAX_MINIBATCH_NUM = int(1e10)
+    MAX_MINIBATCH_NUM = args.MaxMinibatchID if args.MaxMinibatchID != None else 1e100
     select_rows, select_cols = args.select_rows, args.select_cols
 
     ## set the data set
