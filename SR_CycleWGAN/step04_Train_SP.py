@@ -22,6 +22,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, help="The manual random seed")
     parser.add_argument("--MaxMinibatchID", type=int, help="the Max Minibatch ID, use this to cut the trainset")
+    parser.add_argument("--shuffle", type=int, help="is shuffle the trainset")
     parser.add_argument("--dataroot", type=str, help="The root dir for dataset")
     parser.add_argument("--learn_rate", type=float, help="The learn rate")
     parser.add_argument("--minibatch_size", type=int, help="The learn rate")
@@ -56,7 +57,7 @@ if __name__ == '__main__':
     ## set the data set
     dataroot = args.dataroot
     dataset = dset.ImageFolder(root=dataroot, transform=transforms.Compose([transforms.Resize((image_H, image_W))]))
-    dataLoader = Data.DataLoader(dataset, minibatch_size=minibatch_size, row=select_rows, col=select_cols, shuffle=True)
+    dataLoader = Data.DataLoader(dataset, minibatch_size=minibatch_size, row=select_rows, col=select_cols, shuffle=True if args.shuffle else False)
     minibatch_count = min(MAX_MINIBATCH_NUM, len(dataLoader))
 
     ## specify the computing device
