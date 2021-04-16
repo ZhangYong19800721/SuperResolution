@@ -173,11 +173,12 @@ if __name__ == '__main__':
             epoch, minibatch_id, minibatch_count, V_AVE_DIFF, V_AVE_LMSE, V_AVE_HMSE)
             print(message)
 
-            writer.add_scalar("AVE_DIFF", V_AVE_DIFF, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
-            writer.add_scalar("AVE_LMSE", V_AVE_LMSE, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
-            writer.add_scalar("AVE_HMSE", V_AVE_HMSE, minibatch_count * (epoch - B_EPOCHS) + minibatch_id)
+            istep = minibatch_count * (epoch - B_EPOCHS) + minibatch_id
+            writer.add_scalar("AVE_DIFF", V_AVE_DIFF, istep)
+            writer.add_scalar("AVE_LMSE", V_AVE_LMSE, istep)
+            writer.add_scalar("AVE_HMSE", V_AVE_HMSE, istep)
 
-            if minibatch_id % 500 == 0:
+            if istep % 500 == 0:
                 # save model every 1000 iteration
                 model_Gu_file = open(r"./model/model_Gu_CPU_%05d.pkl" % epoch, "wb")
                 model_Gd_file = open(r"./model/model_Gd_CPU_%05d.pkl" % epoch, "wb")
