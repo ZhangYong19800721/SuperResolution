@@ -16,6 +16,8 @@ if __name__ == "__main__":
     parser.add_argument("--dataroot", type=str, help="The root dir for dataset")
     parser.add_argument("--ModelGuFile", type=str, help="None or the path for Gu model")
     parser.add_argument("--ModelGdFile", type=str, help="None or the path for Gd model")
+    parser.add_argument("--MaxMinibatchID", type=int, help="the Max Minibatch ID, use this to cut the trainset")
+    parser.add_argument("--shuffle", type=int, help="is shuffle the trainset")
     args = parser.parse_args()
 
     modelGu_file = open(args.ModelGuFile, "rb")  # open the model file
@@ -36,13 +38,15 @@ if __name__ == "__main__":
 
     image_H, image_W = 128*8, 128*14
     minibatch_size = 1
+    MAX_MINIBATCH_NUM = args.MaxMinibatchID if args.MaxMinibatchID != None else 1e100
     select_rows, select_cols = 8, 14
     dataroot = args.dataroot
     dataset = dset.ImageFolder(root=dataroot, transform=transforms.Compose([transforms.Resize((image_H, image_W))]))
-    dataLoader = Data.DataLoader(dataset, minibatch_size=minibatch_size, row=select_rows, col=select_cols, shuffle=False)
+    dataLoader = Data.DataLoader(dataset, minibatch_size=minibatch_size, row=select_rows, col=select_cols, shuffle=True if args.shuffle else False)
+    minibatch_count = min(MAX_MINIBATCH_NUM, len(dataLoader))
 
     print("Show some images .... ")
-    n = random.randint(0, len(dataLoader)-1)
+    n = random.randint(0, minibatch_count-1)
     ILR, IHR = dataLoader[n]
     with torch.no_grad():
         SHR = modelGu(ILR)
