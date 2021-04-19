@@ -1,8 +1,8 @@
 # coding=utf-8
 
 ########################################################################################################################
-# step04_Train.py
-# train the UHD_GP_WGAN model, include parameters initializing
+# step04_Train_SPWGAN_MMSE.py
+# train the model, include parameters initializing
 ########################################################################################################################
 import argparse
 import random
