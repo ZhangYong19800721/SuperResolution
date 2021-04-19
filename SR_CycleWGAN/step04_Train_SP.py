@@ -1,8 +1,8 @@
 # coding=utf-8
 
 ########################################################################################################################
-# step04_Train.py
-# train the UHD_GP_WGAN model, include parameters initializing
+# step04_Train_SP.py
+# train the model, include parameters initializing
 ########################################################################################################################
 import argparse
 import random
@@ -159,8 +159,9 @@ if __name__ == '__main__':
             RLR = Gd(ISR)
             output_fake_G_D = D(ISR)
             loss_recon_mmse = MSE(ILR, RLR)
-            loss_optim_mmse = MSE(ISR, IHR)
-            loss_G_D = -output_fake_G_D.mean() + loss_recon_mmse + 1e-3 * loss_optim_mmse
+            with torch.no_grad():
+                loss_optim_mmse = MSE(ISR, IHR)
+            loss_G_D = -output_fake_G_D.mean() + loss_recon_mmse # + 1e-3 * loss_optim_mmse
             loss_G_D.backward()
             optimizerGu.step()  # Update Gu parameters
             optimizerGd.step()  # Update Gd parameters
