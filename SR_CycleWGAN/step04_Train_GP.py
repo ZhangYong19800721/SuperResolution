@@ -105,7 +105,7 @@ if __name__ == '__main__':
         D.to(device)  # push model to GPU device
         modelD_file.close()  # close the model file
     else:
-        D = Model.Discriminator()  # create a discriminator
+        D = Model.Discriminator_GP()  # create a discriminator
         D.apply(tools.weights_init)  # initialize weights for discriminator
 
     # Initialize BCE and MSE function
