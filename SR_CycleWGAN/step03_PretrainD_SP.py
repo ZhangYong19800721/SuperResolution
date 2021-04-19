@@ -1,8 +1,8 @@
 # coding=utf-8
 
 ########################################################################################################################
-# step04_Train.py
-# train the UHD_WGANGP model, include parameters initializing
+# step03_PretrainD_SP.py
+# train the model, include parameters initializing
 ########################################################################################################################
 from sys import argv
 import random
