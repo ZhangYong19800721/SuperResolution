@@ -67,10 +67,11 @@ class ResidualBlocks16(nn.Module):
 
 
 class PatchFeatureExtractor16(nn.Module):
-    def __init__(self, interChannel = 64):
+    def __init__(self, inChannel=3, interChannel=64):
         super(PatchFeatureExtractor16, self).__init__()
+        self.inChannel = inChannel
         self.interChannel = interChannel
-        self.L01_Conv2d = nn.Conv2d(3, self.interChannel, 9, padding=9 // 2, bias=True)
+        self.L01_Conv2d = nn.Conv2d(self.inChannel, self.interChannel, 9, padding=9 // 2, bias=True)
         self.L02_PReLU = nn.PReLU(self.interChannel)
         self.L03_ResidualBlocks = ResidualBlocks16(self.interChannel)
         self.L04_Conv2d = nn.Conv2d(self.interChannel, self.interChannel, 3, padding=1, bias=True)
@@ -85,11 +86,13 @@ class PatchFeatureExtractor16(nn.Module):
         z = z + y
         return z
 
+
 class PatchFeatureExtractor8(nn.Module):
-    def __init__(self, interChannel = 64):
+    def __init__(self, inChannel=3, interChannel=64):
         super(PatchFeatureExtractor8, self).__init__()
+        self.inChannel = inChannel
         self.interChannel = interChannel
-        self.L01_Conv2d = nn.Conv2d(3, self.interChannel, 9, padding=9 // 2, bias=True)
+        self.L01_Conv2d = nn.Conv2d(self.inChannel, self.interChannel, 9, padding=9 // 2, bias=True)
         self.L02_PReLU = nn.PReLU(self.interChannel)
         self.L03_ResidualBlocks = ResidualBlocks8(self.interChannel)
         self.L04_Conv2d = nn.Conv2d(self.interChannel, self.interChannel, 3, padding=1, bias=True)
@@ -104,11 +107,13 @@ class PatchFeatureExtractor8(nn.Module):
         z = z + y
         return z
 
+
 class PatchFeatureExtractor4(nn.Module):
-    def __init__(self, interChannel = 64):
+    def __init__(self, inChannel=3, interChannel=64):
         super(PatchFeatureExtractor4, self).__init__()
+        self.inChannel = inChannel
         self.interChannel = interChannel
-        self.L01_Conv2d = nn.Conv2d(3, self.interChannel, 9, padding=9 // 2, bias=True)
+        self.L01_Conv2d = nn.Conv2d(self.inChannel, self.interChannel, 9, padding=9 // 2, bias=True)
         self.L02_PReLU = nn.PReLU(self.interChannel)
         self.L03_ResidualBlocks = ResidualBlocks4(self.interChannel)
         self.L04_Conv2d = nn.Conv2d(self.interChannel, self.interChannel, 3, padding=1, bias=True)
@@ -123,6 +128,18 @@ class PatchFeatureExtractor4(nn.Module):
         z = z + y
         return z
 
+class GeneratorS(nn.Module):
+    def __init__(self):
+        super(GeneratorS, self).__init__()
+        self.L01_Sequential = nn.Sequential(nn.Conv2d(in_channels=3, out_channels=3, kernel_size=3, stride=2, padding=3 // 2),
+                                            nn.BatchNorm2d(3),
+                                            nn.PReLU(3),
+                                            )
+
+    # the x is low resolution images minibatch
+    def forward(self, image):
+        ImageLR = self.L01_Sequential(image)
+        return ImageLR
 
 class GeneratorD(nn.Module):
     def __init__(self):
@@ -134,7 +151,7 @@ class GeneratorD(nn.Module):
                                             nn.Conv2d(256, 256, 3, stride=2, padding=3 // 2),
                                             nn.BatchNorm2d(256),
                                             nn.PReLU(256),
-                                            nn.Conv2d(256, 3, 3, padding=3//2),
+                                            nn.Conv2d(256, 3, 3, padding=3 // 2),
                                             nn.BatchNorm2d(3),
                                             nn.PReLU(3),
                                             )
@@ -145,11 +162,12 @@ class GeneratorD(nn.Module):
         ImageLR = self.L01_Sequential(v)
         return ImageLR
 
+
 class GeneratorU(nn.Module):
-    def __init__(self):
+    def __init__(self, inChannel=3, interChannel=64):
         super(GeneratorU, self).__init__()
-        self.patchFeatureExtractor = PatchFeatureExtractor16(interChannel=64)
-        self.L01_Sequential = nn.Sequential(nn.Conv2d(64, 256, 3, padding=3 // 2),
+        self.patchFeatureExtractor = PatchFeatureExtractor16(inChannel, interChannel)
+        self.L01_Sequential = nn.Sequential(nn.Conv2d(interChannel, 256, 3, padding=3 // 2),
                                             nn.BatchNorm2d(256),
                                             nn.PReLU(256),
                                             nn.ConvTranspose2d(in_channels=256, out_channels=256, kernel_size=4, stride=2, padding=1),
@@ -166,38 +184,18 @@ class GeneratorU(nn.Module):
         ImageSR = self.L01_Sequential(v)
         return ImageSR
 
+
 class GeneratorNoise(nn.Module):
     def __init__(self, nz):
         super(GeneratorNoise, self).__init__()
         self.nz = nz
-        self.patchFeatureExtractor = PatchFeatureExtractor16(interChannel=64)
-        self.L01_Sequential = nn.Sequential(nn.Conv2d(64 + self.nz, 256, 3, padding=3 // 2),
-                                            nn.BatchNorm2d(256),
-                                            nn.PReLU(256),
-                                            nn.Conv2d(256, 256, 3, padding=3 // 2),
-                                            nn.BatchNorm2d(256),
-                                            nn.PReLU(256),
-                                            nn.Conv2d(256, 256, 3, padding=3 // 2),
-                                            nn.BatchNorm2d(256),
-                                            nn.PReLU(256),
-                                            nn.Conv2d(256, 256, 3, padding=3 // 2),
-                                            nn.BatchNorm2d(256),
-                                            nn.PReLU(256),
-                                            nn.ConvTranspose2d(in_channels=256, out_channels=128, kernel_size=4, stride=2, padding=1),
-                                            nn.BatchNorm2d(128),
-                                            nn.PReLU(128),
-                                            nn.ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=4, stride=2, padding=1),
-                                            nn.BatchNorm2d(64),
-                                            nn.PReLU(64),
-                                            nn.Conv2d(64, 3, 9, padding=9 // 2),
-                                            )
+        self.Gu = GeneratorU(inChannel=3 + self.nz, interChannel=64)
 
     # the x is low resolution images minibatch
     def forward(self, image, noise):
-        v = self.patchFeatureExtractor(image)
-        v = torch.cat((v, noise), dim=1)
-        ImageSR = self.L01_Sequential(v)
-        return ImageSR
+        image_noise = torch.cat((image, noise), dim=1)
+        imageSR = self.Gu(image_noise)
+        return imageSR
 
 
 class CV2D_SP_LeakyReLU(nn.Module):
@@ -281,6 +279,7 @@ class Discriminator_SP(nn.Module):
         y = self.FeatureExtractor(imageHR)
         y = self.Full_Sequential(y)
         return y
+
 
 class Discriminator_GP(nn.Module):
     def __init__(self):
@@ -414,7 +413,15 @@ class Discriminator(nn.Module):
         y = self.Full_Sequential(y)
         return y
 
+
 if __name__ == '__main__':
+    Gn = GeneratorNoise(nz=6)
+    image = torch.rand((2, 3, 64, 64))
+    noise = torch.randn((2, 3+6, 64, 64))
+    with torch.no_grad():
+        SR = Gn(image, noise)
+
+
     Gu = GeneratorU()
     image = torch.rand((2, 3, 64, 64))
     with torch.no_grad():
