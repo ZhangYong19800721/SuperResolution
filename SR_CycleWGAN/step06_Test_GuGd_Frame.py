@@ -17,7 +17,10 @@ if __name__ == "__main__":
     parser.add_argument("--dataroot", type=str, help="The root dir for dataset")
     parser.add_argument("--ModelGuFile", type=str, help="None or the path for Gu model")
     parser.add_argument("--ModelGdFile", type=str, help="None or the path for Gd model")
+    parser.add_argument("--MaxSampleID", type=int, help="the Max Minibatch ID, use this to cut the trainset")
     args = parser.parse_args()
+
+    maxSampleID = args.MaxSampleID if args.MaxSampleID else 1e100
 
     modelGu_file = open(args.ModelGuFile, "rb")  # open the model file
     modelGu = pickle.load(modelGu_file)  # load the model file
@@ -38,7 +41,8 @@ if __name__ == "__main__":
     image_H, image_W = 1080, 1920
     dataroot = args.dataroot
     dataset = dset.ImageFolder(root=dataroot, transform=transforms.Compose([transforms.Resize((image_H, image_W))]))
-    n = random.randint(0, len(dataset)-1)
+    maxSampleID = min(maxSampleID, len(dataset)) - 1
+    n = random.randint(0, maxSampleID)
     original_image = dataset[n][0]
     downsamp_image = tools.imResize(original_image, (1080 // 2, 1920 // 2))
     upsample_image = tools.imResize(downsamp_image, (1080 // 1, 1920 // 1))
