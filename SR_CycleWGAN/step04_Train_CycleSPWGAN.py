@@ -159,9 +159,9 @@ if __name__ == '__main__':
             RLR = Gd(ISR)
             output_fake_G_D = D(ISR)
             loss_recon_mmse = MSE(ILR, RLR)
-            with torch.no_grad():
-                loss_optim_mmse = MSE(ISR, IHR)
-            loss_G_D = -output_fake_G_D.mean() + loss_recon_mmse
+            loss_optim_mmse = MSE(ISR, IHR)
+
+            loss_G_D = -1e-3 * output_fake_G_D.mean() + loss_recon_mmse + loss_optim_mmse
             loss_G_D.backward()
             optimizerGu.step()  # Update Gu parameters
             optimizerGd.step()  # Update Gd parameters
