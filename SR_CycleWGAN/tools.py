@@ -142,6 +142,14 @@ def showNineGrid_2x2(I1, I2, I3, I4):
     I = ttf.to_pil_image(I)
     I.show()
 
+def showNineGrid_1x2(I1, I2):
+    image_H, image_W = I1.shape[1:]
+    I1 = ttf.to_tensor(ttf.resize(ttf.to_pil_image(I1), (image_H, image_W), interpolation=Image.BICUBIC))
+    I2 = ttf.to_tensor(ttf.resize(ttf.to_pil_image(I2), (image_H, image_W), interpolation=Image.BICUBIC))
+    I = torch.cat((I1, I2), dim=2)
+    I = ttf.to_pil_image(I)
+    I.show()
+
 def showNineGrid_3x3(I1, I2, I3, I4, I5, I6, I7, I8, I9):
     image_H, image_W = I1.shape[1:]
     I1 = ttf.to_tensor(ttf.resize(ttf.to_pil_image(I1), (image_H, image_W), interpolation=Image.BICUBIC))
