@@ -48,7 +48,7 @@ if __name__ == '__main__':
     N_GPU = args.NGPU  # we have 2 GPUs
     B_EPOCHS, N_EPOCHS = args.B_EPOCHS, args.N_EPOCHS  # train the model for n epochs
     learn_rate = args.learn_rate  # set the learning rate
-    image_H, image_W = 128 * 8, 128 * 14
+    image_H, image_W = 512 * 2, 512 * 3
     minibatch_size = args.minibatch_size  # set the minibatch size
     isLoadPretrainedGu, isLoadPretrainedGd, isLoadPretrainedD = args.isLoadPretrainedGu, args.isLoadPretrainedGd, args.isLoadPretrainedD
     MAX_MINIBATCH_NUM = args.MaxMinibatchID if args.MaxMinibatchID != None else 1e100
@@ -69,8 +69,8 @@ if __name__ == '__main__':
         print("Show some images ...., press ENTER to continue. ")
         n = random.randint(0, len(dataLoader))
         ILR, IHR = dataLoader[n + 1]
-        tools.showNineGrid_3x3(ILR[0], ILR[1], ILR[2], ILR[3], ILR[4], ILR[5], ILR[6], ILR[7], ILR[8])
-        tools.showNineGrid_3x3(IHR[0], IHR[1], IHR[2], IHR[3], IHR[4], IHR[5], IHR[6], IHR[7], IHR[8])
+        tools.showNineGrid_1x2(ILR[0], ILR[1])
+        tools.showNineGrid_1x2(IHR[0], IHR[1])
 
     if isLoadPretrainedGu:
         ##########################################################################
@@ -108,7 +108,7 @@ if __name__ == '__main__':
         D.to(device)  # push model to GPU device
         modelD_file.close()  # close the model file
     else:
-        D = Model.Discriminator_SP()  # create a discriminator
+        D = Model.Discriminator_SP1()  # create a discriminator
         D.apply(tools.weights_init)  # initialize weights for discriminator
 
     # Initialize BCE and MSE function
@@ -153,6 +153,7 @@ if __name__ == '__main__':
             loss.backward()
             optimizerD.step()
 
+            D.zero_grad()  # set discriminator gradient to zero
             Gu.zero_grad()  # set the generator gradient to zero
             Gd.zero_grad()
             ISR = Gu(ILR)

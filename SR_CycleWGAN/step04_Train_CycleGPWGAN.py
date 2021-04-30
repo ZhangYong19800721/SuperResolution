@@ -69,8 +69,8 @@ if __name__ == '__main__':
         print("Show some images ...., press ENTER to continue. ")
         n = random.randint(0, len(dataLoader))
         ILR, IHR = dataLoader[n + 1]
-        tools.showNineGrid_3x3(ILR[0], ILR[1], ILR[2], ILR[3], ILR[4], ILR[5], ILR[6], ILR[7], ILR[8])
-        tools.showNineGrid_3x3(IHR[0], IHR[1], IHR[2], IHR[3], IHR[4], IHR[5], IHR[6], IHR[7], IHR[8])
+        tools.showNineGrid_2x2(ILR[0], ILR[1], ILR[2], ILR[3])
+        tools.showNineGrid_2x2(IHR[0], IHR[1], IHR[2], IHR[3])
 
     if isLoadPretrainedGu:
         ##########################################################################
