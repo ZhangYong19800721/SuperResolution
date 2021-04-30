@@ -11,13 +11,14 @@ import tools
 # dataloader = torch.utils.data.DataLoader(dataset, batch_size=minibatch_size, shuffle=True, num_workers=workers)
 
 class DataLoader(object):
-    def __init__(self, dataset, minibatch_size, row=2, col=3, shuffle=False):
+    def __init__(self, dataset, minibatch_size, row=2, col=3, select_row=2, select_col=3, shuffle=False):
         super(DataLoader, self).__init__()
         self.dataset = dataset
         self.minibatch_size = minibatch_size
         self.shuffle = shuffle
         self.shuffle_layer = list(range(len(self.dataset)))
         self.row, self.col = row, col
+        self.select_row, self.select_col = select_row, select_col
         if shuffle:
             random.shuffle(self.shuffle_layer)
 
@@ -45,11 +46,11 @@ class DataLoader(object):
         patchs_LR = tools.SplitHV(minibatch_images_LR, self.row, self.col)
 
         if self.shuffle:
-            selected_row = random.sample(range(0, self.row), self.row)
-            selected_col = random.sample(range(0, self.col), self.col)
+            selected_row = random.sample(range(0, self.row), self.select_row)
+            selected_col = random.sample(range(0, self.col), self.select_col)
         else:
-            selected_row = list(range(self.row))
-            selected_col = list(range(self.col))
+            selected_row = list(range(self.select_row))
+            selected_col = list(range(self.select_col))
 
         patchs_HR = [patchs_HR[i][j] for i in selected_row for j in selected_col]
         patchs_LR = [patchs_LR[i][j] for i in selected_row for j in selected_col]
