@@ -11,7 +11,7 @@ import tools
 # dataloader = torch.utils.data.DataLoader(dataset, batch_size=minibatch_size, shuffle=True, num_workers=workers)
 
 class DataLoader(object):
-    def __init__(self, dataset, minibatch_size, row=8, col=14, shuffle=False):
+    def __init__(self, dataset, minibatch_size, row=2, col=3, shuffle=False):
         super(DataLoader, self).__init__()
         self.dataset = dataset
         self.minibatch_size = minibatch_size
@@ -41,12 +41,12 @@ class DataLoader(object):
         minibatch_images_LR = torch.stack(minibatch_images_LR)
 
         # split to patch
-        patchs_HR = tools.SplitHV(minibatch_images_HR, 8, 14)
-        patchs_LR = tools.SplitHV(minibatch_images_LR, 8, 14)
+        patchs_HR = tools.SplitHV(minibatch_images_HR, self.row, self.col)
+        patchs_LR = tools.SplitHV(minibatch_images_LR, self.row, self.col)
 
         if self.shuffle:
-            selected_row = random.sample(range(0,  8), self.row)
-            selected_col = random.sample(range(0, 14), self.col)
+            selected_row = random.sample(range(0, self.row), self.row)
+            selected_col = random.sample(range(0, self.col), self.col)
         else:
             selected_row = list(range(self.row))
             selected_col = list(range(self.col))
