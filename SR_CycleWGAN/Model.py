@@ -144,14 +144,14 @@ class GeneratorS(nn.Module):
 class GeneratorD(nn.Module):
     def __init__(self):
         super(GeneratorD, self).__init__()
-        self.patchFeatureExtractor = PatchFeatureExtractor16(interChannel=64)
-        self.L01_Sequential = nn.Sequential(nn.Conv2d(64, 256, 3, padding=3 // 2),
-                                            nn.BatchNorm2d(256),
-                                            nn.PReLU(256),
-                                            nn.Conv2d(256, 256, 3, stride=2, padding=3 // 2),
-                                            nn.BatchNorm2d(256),
-                                            nn.PReLU(256),
-                                            nn.Conv2d(256, 3, 3, padding=3 // 2),
+        self.patchFeatureExtractor = PatchFeatureExtractor16(interChannel=32)
+        self.L01_Sequential = nn.Sequential(nn.Conv2d(32, 128, 3, padding=3 // 2),
+                                            nn.BatchNorm2d(128),
+                                            nn.PReLU(128),
+                                            nn.Conv2d(128, 128, 3, stride=2, padding=3 // 2),
+                                            nn.BatchNorm2d(128),
+                                            nn.PReLU(128),
+                                            nn.Conv2d(128, 3, 3, padding=3 // 2),
                                             nn.BatchNorm2d(3),
                                             nn.PReLU(3),
                                             )
@@ -164,7 +164,7 @@ class GeneratorD(nn.Module):
 
 
 class GeneratorU(nn.Module):
-    def __init__(self, inChannel=3, interChannel=64):
+    def __init__(self, inChannel=3, interChannel=128):
         super(GeneratorU, self).__init__()
         self.patchFeatureExtractor = PatchFeatureExtractor16(inChannel, interChannel)
         self.L01_Sequential = nn.Sequential(nn.Conv2d(interChannel, 256, 3, padding=3 // 2),
@@ -263,6 +263,46 @@ class Discriminator_SP(nn.Module):
             nn.LeakyReLU(0.2),
             nn.utils.spectral_norm(nn.Conv2d(in_channels=2048, out_channels=2048, kernel_size=3, stride=2, padding=3 // 2, bias=True)),
             # nn.utils.spectral_norm(nn.BatchNorm2d(2048)),
+            nn.LeakyReLU(0.2),
+            nn.Flatten(),
+        )
+
+        self.Full_Sequential = nn.Sequential(
+            nn.utils.spectral_norm(nn.Linear(2048, 1024)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Linear(1024, 512)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Linear(512, 1)),
+        )
+
+    def forward(self, imageHR):
+        y = self.FeatureExtractor(imageHR)
+        y = self.Full_Sequential(y)
+        return y
+
+
+class Discriminator_SP1(nn.Module):
+    def __init__(self):
+        super(Discriminator_SP1, self).__init__()
+
+        self.FeatureExtractor = nn.Sequential(
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=3, out_channels=64, kernel_size=9, stride=1, padding=9 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=64, out_channels=64, kernel_size=9, stride=1, padding=9 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=64, out_channels=128, kernel_size=9, stride=4, padding=9 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=128, out_channels=128, kernel_size=9, stride=1, padding=9 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=128, out_channels=256, kernel_size=9, stride=4, padding=9 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=256, out_channels=256, kernel_size=9, stride=1, padding=9 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=256, out_channels=512, kernel_size=9, stride=4, padding=9 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=512, out_channels=512, kernel_size=9, stride=1, padding=9 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=512, out_channels=128, kernel_size=9, stride=2, padding=9 // 2, bias=True)),
             nn.LeakyReLU(0.2),
             nn.Flatten(),
         )
@@ -415,29 +455,8 @@ class Discriminator(nn.Module):
 
 
 if __name__ == '__main__':
-    Gn = GeneratorNoise(nz=6)
-    image = torch.rand((2, 3, 64, 64))
-    noise = torch.randn((2, 3+6, 64, 64))
-    with torch.no_grad():
-        SR = Gn(image, noise)
-
-
-    Gu = GeneratorU()
-    image = torch.rand((2, 3, 64, 64))
-    with torch.no_grad():
-        SR = Gu(image)
-
-    Gd = GeneratorD()
-    with torch.no_grad():
-        LR = Gd(SR)
-
-    D_SP = Discriminator_SP()
-    image = torch.rand((2, 3, 128, 128))
+    D_SP = Discriminator_SP1()
+    image = torch.rand((2, 3, 512, 512))
     with torch.no_grad():
         z = D_SP(image)
-    print(z.shape)
-
-    D = Discriminator()
-    with torch.no_grad():
-        z = D(image)
     print(z.shape)
