@@ -11,7 +11,7 @@ import tools
 # dataloader = torch.utils.data.DataLoader(dataset, batch_size=minibatch_size, shuffle=True, num_workers=workers)
 
 class DataLoader(object):
-    def __init__(self, dataset, minibatch_size, row=2, col=3, select_row=2, select_col=3, shuffle=False):
+    def __init__(self, dataset, minibatch_size=10, row=8, col=14, select_row=2, select_col=3, shuffle=False):
         super(DataLoader, self).__init__()
         self.dataset = dataset
         self.minibatch_size = minibatch_size

@@ -128,6 +128,7 @@ def showNineGrid_1x9(I1, I2, I3, I4, I5, I6, I7, I8, I9):
     I = ttf.to_pil_image(I)
     I.show()
 
+
 def showNineGrid_2x2(I1, I2, I3, I4):
     image_H, image_W = I1.shape[1:]
     I1 = ttf.to_tensor(ttf.resize(ttf.to_pil_image(I1), (image_H, image_W), interpolation=Image.BICUBIC))
@@ -135,12 +136,12 @@ def showNineGrid_2x2(I1, I2, I3, I4):
     I3 = ttf.to_tensor(ttf.resize(ttf.to_pil_image(I3), (image_H, image_W), interpolation=Image.BICUBIC))
     I4 = ttf.to_tensor(ttf.resize(ttf.to_pil_image(I4), (image_H, image_W), interpolation=Image.BICUBIC))
 
-
     R1 = torch.cat((I1, I2), dim=2)
     R2 = torch.cat((I3, I4), dim=2)
-    I = torch.cat((R1,R2), dim=1)
+    I = torch.cat((R1, R2), dim=1)
     I = ttf.to_pil_image(I)
     I.show()
+
 
 def showNineGrid_1x2(I1, I2):
     image_H, image_W = I1.shape[1:]
@@ -149,6 +150,7 @@ def showNineGrid_1x2(I1, I2):
     I = torch.cat((I1, I2), dim=2)
     I = ttf.to_pil_image(I)
     I.show()
+
 
 def showNineGrid_3x3(I1, I2, I3, I4, I5, I6, I7, I8, I9):
     image_H, image_W = I1.shape[1:]
@@ -165,9 +167,10 @@ def showNineGrid_3x3(I1, I2, I3, I4, I5, I6, I7, I8, I9):
     R1 = torch.cat((I1, I2, I3), dim=2)
     R2 = torch.cat((I4, I5, I6), dim=2)
     R3 = torch.cat((I7, I8, I9), dim=2)
-    I = torch.cat((R1,R2,R3), dim=1)
+    I = torch.cat((R1, R2, R3), dim=1)
     I = ttf.to_pil_image(I)
     I.show()
+
 
 def showNineGrid_4x7(I11, I12, I13, I14, I15, I16, I17,
                      I21, I22, I23, I24, I25, I26, I27,
@@ -206,24 +209,23 @@ def showNineGrid_4x7(I11, I12, I13, I14, I15, I16, I17,
     I46 = ttf.to_tensor(ttf.resize(ttf.to_pil_image(I46), (image_H, image_W), interpolation=Image.BICUBIC))
     I47 = ttf.to_tensor(ttf.resize(ttf.to_pil_image(I47), (image_H, image_W), interpolation=Image.BICUBIC))
 
-
     R1 = torch.cat((I11, I12, I13, I14, I15, I16, I17), dim=2)
     R2 = torch.cat((I21, I22, I23, I24, I25, I26, I27), dim=2)
     R3 = torch.cat((I31, I32, I33, I34, I35, I36, I37), dim=2)
     R4 = torch.cat((I41, I42, I43, I44, I45, I46, I47), dim=2)
-    I = torch.cat((R1,R2,R3,R4), dim=1)
+    I = torch.cat((R1, R2, R3, R4), dim=1)
     I = ttf.to_pil_image(I)
     I.show()
 
 
 class EXPMA(object):
-    def __init__(self, alfa = 0.01, init = None):
+    def __init__(self, alfa=0.01, init=None):
         super(EXPMA, self).__init__()
         self.alpha = alfa
         self.value = init
 
     def expma(self, new_value):
-        self.value = new_value if self.value==None else ((1-self.alpha)*self.value + self.alpha*new_value)
+        self.value = new_value if self.value == None else ((1 - self.alpha) * self.value + self.alpha * new_value)
         return self.value
 
 
@@ -238,6 +240,7 @@ def weights_init(m):
     elif classname.find('Linear') != -1:
         nn.init.normal_(m.weight.data, 0.0, 0.02)
         nn.init.constant_(m.bias.data, 0)
+
 
 # calculate the gradient penalty
 def cal_gradient_penalty(D, device, real_samples, fake_samples):
@@ -265,34 +268,6 @@ def cal_gradient_penalty(D, device, real_samples, fake_samples):
 
     # 利用梯度计算出gradient penalty
     gradient_penalty = ((gradients.norm(2, dim=(1, 2, 3)) - 1) ** 2).mean()
-    return gradient_penalty
-
-# compute the gradient penalty
-def compute_gradient_penalty(D, device, real_samples, fake_samples):
-    # weight alpha
-    N = real_samples.size(0)
-    C = real_samples.size(1)
-    H = real_samples.size(2)
-    W = real_samples.size(3)
-
-    alpha = torch.rand(N, 1)
-    alpha = alpha.expand((-1, C * H * W)).reshape((N, C, H, W))
-    alpha = alpha.to(device)
-
-    # calculate interpolates
-    interpolates = alpha * real_samples + ((1 - alpha) * fake_samples)
-
-    # want to get the gradient, calculate the Discriminator's output firstly
-    interpolates = autograd.Variable(interpolates, requires_grad=True)
-    disc_interpolates = D(interpolates)
-
-    # 计算梯度
-    gradients = autograd.grad(outputs=disc_interpolates, inputs=interpolates,
-                              grad_outputs=torch.ones(disc_interpolates.size()).to(device),
-                              create_graph=True, retain_graph=True, only_inputs=True)[0]
-
-    # 利用梯度计算出gradient penalty
-    gradient_penalty = torch.relu(gradients.norm(2, dim=(1, 2, 3)) - 0.95).mean()
     return gradient_penalty
 
 

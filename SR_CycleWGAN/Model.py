@@ -128,44 +128,57 @@ class PatchFeatureExtractor4(nn.Module):
         z = z + y
         return z
 
-class GeneratorS(nn.Module):
-    def __init__(self):
-        super(GeneratorS, self).__init__()
-        self.L01_Sequential = nn.Sequential(nn.Conv2d(in_channels=3, out_channels=3, kernel_size=3, stride=2, padding=3 // 2),
-                                            nn.BatchNorm2d(3),
-                                            nn.PReLU(3),
+
+class Generator(nn.Module):
+    def __init__(self, nz=100):
+        super(Generator, self).__init__()
+        self.L01_Sequential = nn.Sequential(nn.ConvTranspose2d(nz, 512, kernel_size=4, stride=1, padding=0),
+                                            nn.BatchNorm2d(512),
+                                            nn.PReLU(512),
+                                            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),
+                                            nn.BatchNorm2d(256),
+                                            nn.PReLU(256),
+                                            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
+                                            nn.BatchNorm2d(128),
+                                            nn.PReLU(128),
+                                            nn.ConvTranspose2d(128, 1, kernel_size=4, stride=2, padding=1),
+                                            nn.LeakyReLU(0.2),
                                             )
 
     # the x is low resolution images minibatch
-    def forward(self, image):
-        ImageLR = self.L01_Sequential(image)
-        return ImageLR
+    def forward(self, x):
+        y = self.L01_Sequential(x)
+        return y
 
-class GeneratorD(nn.Module):
-    def __init__(self):
-        super(GeneratorD, self).__init__()
-        self.patchFeatureExtractor = PatchFeatureExtractor16(interChannel=32)
-        self.L01_Sequential = nn.Sequential(nn.Conv2d(32, 128, 3, padding=3 // 2),
-                                            nn.BatchNorm2d(128),
-                                            nn.PReLU(128),
-                                            nn.Conv2d(128, 128, 3, stride=2, padding=3 // 2),
-                                            nn.BatchNorm2d(128),
-                                            nn.PReLU(128),
-                                            nn.Conv2d(128, 3, 3, padding=3 // 2),
-                                            nn.BatchNorm2d(3),
-                                            nn.PReLU(3),
+
+class GeneratorUx1(nn.Module):
+    def __init__(self, inChannel=3, interChannel=64, outChannel=3):
+        super(GeneratorUx1, self).__init__()
+        self.L00_Transform = nn.Conv2d(in_channels=inChannel, out_channels=inChannel, kernel_size=1, padding=0, bias=True)
+        self.patchFeatureExtractor = PatchFeatureExtractor16(inChannel, interChannel)
+        self.L01_Sequential = nn.Sequential(nn.Conv2d(interChannel, 256, 3, padding=3 // 2),
+                                            nn.BatchNorm2d(256),
+                                            nn.PReLU(256),
+                                            nn.Conv2d(256, outChannel, 9, padding=9 // 2),
+                                            nn.BatchNorm2d(outChannel),
+                                            # nn.LeakyReLU(0.02),
                                             )
 
     # the x is low resolution images minibatch
-    def forward(self, image):
-        v = self.patchFeatureExtractor(image)
-        ImageLR = self.L01_Sequential(v)
-        return ImageLR
+    def forward(self, x):
+        y = self.L00_Transform(x)
+        z = self.patchFeatureExtractor(y)
+        z = self.L01_Sequential(z)
+        y = y + z
+        y = torch.nn.functional.leaky_relu(y, 0.02)
+        y = 1 - torch.nn.functional.leaky_relu(1 - y, 0.02)
+        return y
 
 
-class GeneratorU(nn.Module):
-    def __init__(self, inChannel=3, interChannel=128):
-        super(GeneratorU, self).__init__()
+class GeneratorUx2(nn.Module):
+    def __init__(self, inChannel=3, interChannel=64, outChannel=3):
+        super(GeneratorUx2, self).__init__()
+        self.L00_Transform = nn.ConvTranspose2d(in_channels=inChannel, out_channels=outChannel, kernel_size=2, stride=2, padding=0)
         self.patchFeatureExtractor = PatchFeatureExtractor16(inChannel, interChannel)
         self.L01_Sequential = nn.Sequential(nn.Conv2d(interChannel, 256, 3, padding=3 // 2),
                                             nn.BatchNorm2d(256),
@@ -173,136 +186,84 @@ class GeneratorU(nn.Module):
                                             nn.ConvTranspose2d(in_channels=256, out_channels=256, kernel_size=4, stride=2, padding=1),
                                             nn.BatchNorm2d(256),
                                             nn.PReLU(256),
-                                            nn.Conv2d(256, 3, 9, padding=9 // 2),
-                                            nn.BatchNorm2d(3),
-                                            nn.PReLU(3),
+                                            nn.Conv2d(256, outChannel, 9, padding=9 // 2),
+                                            nn.BatchNorm2d(outChannel),
                                             )
 
     # the x is low resolution images minibatch
-    def forward(self, image):
-        v = self.patchFeatureExtractor(image)
-        ImageSR = self.L01_Sequential(v)
-        return ImageSR
+    def forward(self, x):
+        y = self.L00_Transform(x)
+        z = self.patchFeatureExtractor(x)
+        z = self.L01_Sequential(z)
+        y = y + z
+        y = torch.nn.functional.leaky_relu(y, 0.02)
+        y = 1 - torch.nn.functional.leaky_relu(1 - y, 0.02)
+        return y
 
 
-class GeneratorNoise(nn.Module):
-    def __init__(self, nz):
-        super(GeneratorNoise, self).__init__()
-        self.nz = nz
-        self.Gu = GeneratorU(inChannel=3 + self.nz, interChannel=64)
+class GeneratorDx1(nn.Module):
+    def __init__(self, inChannel=3, interChannel=64, outChannel=3):
+        super(GeneratorDx1, self).__init__()
+        self.L00_Transform = nn.Conv2d(in_channels=inChannel, out_channels=inChannel, kernel_size=1, padding=0, bias=True)
+        self.patchFeatureExtractor = PatchFeatureExtractor16(inChannel, interChannel)
+        self.L01_Sequential = nn.Sequential(nn.Conv2d(interChannel, 256, 3, padding=3 // 2),
+                                            nn.BatchNorm2d(256),
+                                            nn.PReLU(256),
+                                            nn.Conv2d(256, outChannel, 3, padding=3 // 2),
+                                            nn.BatchNorm2d(outChannel),
+                                            )
 
     # the x is low resolution images minibatch
-    def forward(self, image, noise):
-        image_noise = torch.cat((image, noise), dim=1)
-        imageSR = self.Gu(image_noise)
-        return imageSR
-
-
-class CV2D_SP_LeakyReLU(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=1):
-        super(CV2D_SP_LeakyReLU, self).__init__()
-        self.L01_Sequential = nn.Sequential(
-            nn.utils.spectral_norm(
-                nn.Conv2d(in_channels=in_channels,
-                          out_channels=out_channels,
-                          kernel_size=kernel_size,
-                          stride=stride,
-                          padding=padding,
-                          bias=True)),
-            nn.LeakyReLU(0.2)
-        )
-
     def forward(self, x):
-        y = self.L01_Sequential(x)
+        y = self.L00_Transform(x)
+        z = self.patchFeatureExtractor(y)
+        z = self.L01_Sequential(z)
+        y = y + z
+        y = torch.nn.functional.leaky_relu(y, 0.02)
+        y = 1 - torch.nn.functional.leaky_relu(1 - y, 0.02)
         return y
 
 
-class Discriminator_SP(nn.Module):
-    def __init__(self):
-        super(Discriminator_SP, self).__init__()
+class GeneratorDx2(nn.Module):
+    def __init__(self, inChannel=3, interChannel=64, outChannel=3):
+        super(GeneratorDx2, self).__init__()
+        self.L00_Transform = nn.Conv2d(in_channels=inChannel, out_channels=outChannel, kernel_size=2, stride=2, padding=0)
+        self.patchFeatureExtractor = PatchFeatureExtractor16(inChannel, interChannel)
+        self.L01_Sequential = nn.Sequential(nn.Conv2d(interChannel, 256, 3, padding=3 // 2),
+                                            nn.BatchNorm2d(256),
+                                            nn.PReLU(256),
+                                            nn.Conv2d(256, 256, 3, stride=2, padding=3 // 2),
+                                            nn.BatchNorm2d(256),
+                                            nn.PReLU(256),
+                                            nn.Conv2d(256, outChannel, 3, padding=3 // 2),
+                                            nn.BatchNorm2d(outChannel),
+                                            )
 
-        self.FeatureExtractor = nn.Sequential(
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, stride=1, padding=3 // 2, bias=True)),
-            # nn.utils.spectral_norm(nn.BatchNorm2d(32)),
-            nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=2, padding=3 // 2, bias=True)),
-            # nn.utils.spectral_norm(nn.BatchNorm2d(32)),
-            nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=3 // 2, bias=True)),
-            # nn.utils.spectral_norm(nn.BatchNorm2d(64)),
-            nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=2, padding=3 // 2, bias=True)),
-            # nn.utils.spectral_norm(nn.BatchNorm2d(64)),
-            nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=3 // 2, bias=True)),
-            # nn.utils.spectral_norm(nn.BatchNorm2d(128)),
-            nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=2, padding=3 // 2, bias=True)),
-            # nn.utils.spectral_norm(nn.BatchNorm2d(128)),
-            nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=3 // 2, bias=True)),
-            # nn.utils.spectral_norm(nn.BatchNorm2d(256)),
-            nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=2, padding=3 // 2, bias=True)),
-            # nn.utils.spectral_norm(nn.BatchNorm2d(256)),
-            nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=3 // 2, bias=True)),
-            # nn.utils.spectral_norm(nn.BatchNorm2d(512)),
-            nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=2, padding=3 // 2, bias=True)),
-            # nn.utils.spectral_norm(nn.BatchNorm2d(512)),
-            nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=3, stride=1, padding=3 // 2, bias=True)),
-            # nn.utils.spectral_norm(nn.BatchNorm2d(1024)),
-            nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=1024, out_channels=1024, kernel_size=3, stride=2, padding=3 // 2, bias=True)),
-            # nn.utils.spectral_norm(nn.BatchNorm2d(1024)),
-            nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=1024, out_channels=2048, kernel_size=3, stride=1, padding=3 // 2, bias=True)),
-            # nn.utils.spectral_norm(nn.BatchNorm2d(2048)),
-            nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=2048, out_channels=2048, kernel_size=3, stride=2, padding=3 // 2, bias=True)),
-            # nn.utils.spectral_norm(nn.BatchNorm2d(2048)),
-            nn.LeakyReLU(0.2),
-            nn.Flatten(),
-        )
-
-        self.Full_Sequential = nn.Sequential(
-            nn.utils.spectral_norm(nn.Linear(2048, 1024)),
-            nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Linear(1024, 512)),
-            nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Linear(512, 1)),
-        )
-
-    def forward(self, imageHR):
-        y = self.FeatureExtractor(imageHR)
-        y = self.Full_Sequential(y)
+    # the x is low resolution images minibatch
+    def forward(self, x):
+        y = self.L00_Transform(x)
+        z = self.patchFeatureExtractor(x)
+        z = self.L01_Sequential(z)
+        y = y + z
+        y = torch.nn.functional.leaky_relu(y, 0.02)
+        y = 1 - torch.nn.functional.leaky_relu(1 - y, 0.02)
         return y
 
 
-class Discriminator_SP1(nn.Module):
-    def __init__(self):
-        super(Discriminator_SP1, self).__init__()
+class DiscriminatorSPx1(nn.Module):
+    def __init__(self, inChannel=1):
+        super(DiscriminatorSPx1, self).__init__()
 
         self.FeatureExtractor = nn.Sequential(
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=3, out_channels=64, kernel_size=9, stride=1, padding=9 // 2, bias=True)),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=inChannel, out_channels=32, kernel_size=3, stride=1, padding=3 // 2, bias=True)),
             nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=64, out_channels=64, kernel_size=9, stride=1, padding=9 // 2, bias=True)),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding=3 // 2, bias=True)),
             nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=64, out_channels=128, kernel_size=9, stride=4, padding=9 // 2, bias=True)),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=2, padding=3 // 2, bias=True)),
             nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=128, out_channels=128, kernel_size=9, stride=1, padding=9 // 2, bias=True)),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=3 // 2, bias=True)),
             nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=128, out_channels=256, kernel_size=9, stride=4, padding=9 // 2, bias=True)),
-            nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=256, out_channels=256, kernel_size=9, stride=1, padding=9 // 2, bias=True)),
-            nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=256, out_channels=512, kernel_size=9, stride=4, padding=9 // 2, bias=True)),
-            nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=512, out_channels=512, kernel_size=9, stride=1, padding=9 // 2, bias=True)),
-            nn.LeakyReLU(0.2),
-            nn.utils.spectral_norm(nn.Conv2d(in_channels=512, out_channels=128, kernel_size=9, stride=2, padding=9 // 2, bias=True)),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=64, out_channels=32, kernel_size=3, stride=2, padding=3 // 2, bias=True)),
             nn.LeakyReLU(0.2),
             nn.Flatten(),
         )
@@ -322,61 +283,27 @@ class Discriminator_SP1(nn.Module):
 
 
 class Discriminator_GP(nn.Module):
-    def __init__(self):
+    def __init__(self, inChannel=1):
         super(Discriminator_GP, self).__init__()
 
         self.FeatureExtractor = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, stride=1, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(in_channels=inChannel, out_channels=32, kernel_size=3, stride=1, padding=1, bias=True),
             nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=2, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding=1, bias=True),
             nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=2, padding=1, bias=True),
             nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=2, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1, bias=True),
             nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=2, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=2, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=2, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=3, stride=1, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(1024),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=1024, out_channels=1024, kernel_size=3, stride=2, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(1024),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=1024, out_channels=2048, kernel_size=3, stride=1, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(2048),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=2048, out_channels=2048, kernel_size=3, stride=2, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(2048),
+            nn.Conv2d(in_channels=64, out_channels=32, kernel_size=3, stride=2, padding=1, bias=True),
             nn.LeakyReLU(0.2),
             nn.Flatten(),
         )
 
         self.Full_Sequential = nn.Sequential(
             nn.Linear(2048, 1024),
-            nn.BatchNorm1d(1024),
             nn.LeakyReLU(0.2),
             nn.Linear(1024, 512),
-            nn.BatchNorm1d(512),
             nn.LeakyReLU(0.2),
             nn.Linear(512, 1),
         )
@@ -388,64 +315,80 @@ class Discriminator_GP(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self):
+    def __init__(self, inChannel=1):
         super(Discriminator, self).__init__()
 
         self.FeatureExtractor = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, stride=1, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(in_channels=inChannel, out_channels=32, kernel_size=3, stride=1, padding=3 // 2, bias=True),
             nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=2, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding=3 // 2, bias=True),
             nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=2, padding=3 // 2, bias=True),
             nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=2, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=3 // 2, bias=True),
             nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=2, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=2, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=2, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=3, stride=1, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(1024),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=1024, out_channels=1024, kernel_size=3, stride=2, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(1024),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=1024, out_channels=2048, kernel_size=3, stride=1, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(2048),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=2048, out_channels=2048, kernel_size=3, stride=2, padding=3 // 2, bias=True),
-            nn.BatchNorm2d(2048),
+            nn.Conv2d(in_channels=64, out_channels=32, kernel_size=3, stride=2, padding=3 // 2, bias=True),
             nn.LeakyReLU(0.2),
             nn.Flatten(),
         )
 
         self.Full_Sequential = nn.Sequential(
             nn.Linear(2048, 1024),
-            nn.BatchNorm1d(1024),
             nn.LeakyReLU(0.2),
             nn.Linear(1024, 512),
-            nn.BatchNorm1d(512),
             nn.LeakyReLU(0.2),
             nn.Linear(512, 1),
-            nn.Sigmoid()
+            nn.Sigmoid(),
+        )
+
+    def forward(self, imageHR):
+        y = self.FeatureExtractor(imageHR)
+        y = self.Full_Sequential(y)
+        return y
+
+
+class DiscriminatorSPx2(nn.Module):
+    def __init__(self, inChannel=3):
+        super(DiscriminatorSPx2, self).__init__()
+
+        self.FeatureExtractor = nn.Sequential(
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=inChannel, out_channels=32, kernel_size=3, stride=1, padding=3 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=2, padding=3 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=3 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=2, padding=3 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=3 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=2, padding=3 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=3 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=2, padding=3 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=3 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=2, padding=3 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=3, stride=1, padding=3 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=1024, out_channels=1024, kernel_size=3, stride=2, padding=3 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=1024, out_channels=2048, kernel_size=3, stride=1, padding=3 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Conv2d(in_channels=2048, out_channels=2048, kernel_size=3, stride=2, padding=3 // 2, bias=True)),
+            nn.LeakyReLU(0.2),
+            nn.Flatten(),
+        )
+
+        self.Full_Sequential = nn.Sequential(
+            nn.utils.spectral_norm(nn.Linear(2048, 1024)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Linear(1024, 512)),
+            nn.LeakyReLU(0.2),
+            nn.utils.spectral_norm(nn.Linear(512, 1)),
         )
 
     def forward(self, imageHR):
@@ -455,8 +398,22 @@ class Discriminator(nn.Module):
 
 
 if __name__ == '__main__':
-    D_SP = Discriminator_SP1()
-    image = torch.rand((2, 3, 512, 512))
+    Gu = GeneratorUx2(3, 64, 3)
+    image = torch.rand((2, 3, 64, 64))
     with torch.no_grad():
-        z = D_SP(image)
+        z = Gu(image)
     print(z.shape)
+
+
+    transCov2d = nn.ConvTranspose2d(in_channels=3, out_channels=3, kernel_size=2, stride=2, padding=0)
+    y = transCov2d(image)
+    print(y.shape)
+
+    big_image = torch.rand((2, 3, 128, 128))
+    Cov2d = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=2, stride=2, padding=0)
+    q = Cov2d(big_image)
+    print(q.shape)
+
+    D = DiscriminatorSPx2(inChannel=3)
+    output_D = D(big_image)
+    print(output_D.shape)

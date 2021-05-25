@@ -12,32 +12,32 @@ import torchvision.transforms.functional as ttf
 if __name__ == "__main__":
     # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # get the GPU device
     ##########################################################################
-    ## load the AI model
+    ## load the AI output
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataroot", type=str, help="The root dir for dataset")
-    parser.add_argument("--ModelGuFile", type=str, help="None or the path for Gu model")
-    parser.add_argument("--ModelGdFile", type=str, help="None or the path for Gd model")
+    parser.add_argument("--ModelGuFile", type=str, help="None or the path for Gu output")
+    parser.add_argument("--ModelGdFile", type=str, help="None or the path for Gd output")
     parser.add_argument("--MaxSampleID", type=int, help="the Max Minibatch ID, use this to cut the trainset")
     parser.add_argument("--sampleID", type=int, help="specify the target frame")
     args = parser.parse_args()
 
     maxSampleID = args.MaxSampleID if args.MaxSampleID else 1e100
 
-    modelGu_file = open(args.ModelGuFile, "rb")  # open the model file
-    modelGu = pickle.load(modelGu_file)  # load the model file
+    modelGu_file = open(args.ModelGuFile, "rb")  # open the output file
+    modelGu = pickle.load(modelGu_file)  # load the output file
     if isinstance(modelGu, nn.DataParallel):
         modelGu = modelGu.module
-    modelGu.to('cpu')  # push model to GPU device
-    modelGu.eval()  # set the model to evaluation mode, (the dropout layer need this)
-    modelGu_file.close()  # close the model file
+    modelGu.to('cpu')  # push output to GPU device
+    modelGu.eval()  # set the output to evaluation mode, (the dropout layer need this)
+    modelGu_file.close()  # close the output file
 
-    modelGd_file = open(args.ModelGdFile, "rb")  # open the model file
-    modelGd = pickle.load(modelGd_file)  # load the model file
+    modelGd_file = open(args.ModelGdFile, "rb")  # open the output file
+    modelGd = pickle.load(modelGd_file)  # load the output file
     if isinstance(modelGd, nn.DataParallel):
         modelGd = modelGd.module
-    modelGd.to('cpu')  # push model to GPU device
-    modelGd.eval()  # set the model to evaluation mode, (the dropout layer need this)
-    modelGd_file.close()  # close the model file
+    modelGd.to('cpu')  # push output to GPU device
+    modelGd.eval()  # set the output to evaluation mode, (the dropout layer need this)
+    modelGd_file.close()  # close the output file
 
     image_H, image_W = 1080, 1920
     dataroot = args.dataroot
