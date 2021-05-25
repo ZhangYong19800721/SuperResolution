@@ -188,9 +188,9 @@ if __name__ == '__main__':
 
             if istep % 300 == 0:
                 # save output every 1000 iteration
-                model_Gu_file = open(args.outputDir + "/" + open_time_str + "model_Gu_CPU.pkl", "wb")
-                model_Gd_file = open(args.outputDir + "/" + open_time_str + "model_Gd_CPU.pkl", "wb")
-                model_D_file = open(args.outputDir + "/" + open_time_str + "model_D_SP_CPU.pkl", "wb")
+                model_Gu_file = open(args.outputDir + "/" + open_time_str + "/model_Gu_CPU.pkl", "wb")
+                model_Gd_file = open(args.outputDir + "/" + open_time_str + "/model_Gd_CPU.pkl", "wb")
+                model_D_file = open(args.outputDir + "/" + open_time_str + "/model_D_SP_CPU.pkl", "wb")
                 pickle.dump(Gu.to("cpu"), model_Gu_file)
                 pickle.dump(Gd.to("cpu"), model_Gd_file)
                 pickle.dump(D.to("cpu"), model_D_file)
