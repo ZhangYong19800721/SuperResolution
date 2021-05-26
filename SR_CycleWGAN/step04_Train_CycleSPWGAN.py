@@ -32,6 +32,9 @@ from torch.utils.tensorboard import SummaryWriter
 --outputDir=./output
 --logDir=./logdir
 --shuffle=1
+--isLoadGu=./output/20210525[11:32:25]/model_Gu_CPU.pkl
+--isLoadGd=./output/20210525[11:32:25]/model_Gd_CPU.pkl
+--isLoadD=./output/20210525[11:32:25]/model_D_SP_CPU.pkl
 """
 
 if __name__ == '__main__':
@@ -142,6 +145,7 @@ if __name__ == '__main__':
     alpha = 0.01
     AVE_DIFF = tools.EXPMA(alpha)
     AVE_MMSE = tools.EXPMA(alpha)
+    AVE_RMSE = tools.EXPMA(alpha)
 
     # leakyRELU = nn.LeakyReLU(0.0)
     for epoch in range(args.B_EPOCHS, args.N_EPOCHS + 1):
@@ -168,23 +172,26 @@ if __name__ == '__main__':
             RLR = Gd(ISR)
             output_fake_G_D = D(ISR)
             loss_mmse = MSE(ILR, RLR)
+            loss_reco = MSE(ISR, IHR)
             loss_G_D = -output_fake_G_D.mean()
 
-            loss_G = 0.001 * loss_G_D + loss_mmse
+            loss_G = loss_mmse + 1e-3 * loss_G_D + 1e-6 * loss_reco
             loss_G.backward()
             optimizerGu.step()  # Update Gu parameters
             optimizerGd.step()  # Update Gd parameters
 
             V_AVE_DIFF = AVE_DIFF.expma(abs(diff.item()))
             V_AVE_MMSE = AVE_MMSE.expma(loss_mmse.item())
+            V_AVE_RMSE = AVE_RMSE.expma(loss_reco.item())
 
-            message = "Epoch:%3d, MinibatchID:%5d/%05d, DIFF:% 6.12f, MMSE: % 6.12f" % (
-                epoch, minibatch_id, minibatch_count, V_AVE_DIFF, V_AVE_MMSE)
+            message = "Epoch:%3d, MinibatchID:%5d/%05d, DIFF:% 6.12f, MMSE: % 6.12f, RMSE: % 6.12f" % (
+                epoch, minibatch_id, minibatch_count, V_AVE_DIFF, V_AVE_MMSE, V_AVE_RMSE)
             print(message)
 
             istep = minibatch_count * (epoch - args.B_EPOCHS) + minibatch_id
             writer.add_scalar("AVE_DIFF", V_AVE_DIFF, istep)
             writer.add_scalar("AVE_MMSE", V_AVE_MMSE, istep)
+            writer.add_scalar("AVE_RMSE", V_AVE_RMSE, istep)
 
             if istep % 300 == 0:
                 # save output every 1000 iteration
