@@ -175,7 +175,7 @@ if __name__ == '__main__':
             loss_reco = MSE(ISR, IHR)
             loss_G_D = -output_fake_G_D.mean()
 
-            loss_G = loss_mmse + 1e-3 * loss_G_D + 1e-6 * loss_reco
+            loss_G = loss_mmse + 1e-6 * loss_G_D + 1e-9 * loss_reco
             loss_G.backward()
             optimizerGu.step()  # Update Gu parameters
             optimizerGd.step()  # Update Gd parameters
