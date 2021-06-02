@@ -49,6 +49,8 @@ if __name__ == '__main__':
     parser.add_argument("--NGPU", type=int, help="specify the number of GPUs to use")
     parser.add_argument("--B_EPOCHS", type=int, help="The start epoch id")
     parser.add_argument("--N_EPOCHS", type=int, help="The end epoch id")
+    parser.add_argument("--alfa", type=float, help="the weight for loss_G_D")
+    parser.add_argument("--beda", type=float, help="The weight for loss_reco")
     parser.add_argument("--isLoadGu", type=str, help="None or the path for pretrained Gu model")
     parser.add_argument("--isLoadGd", type=str, help="None or the path for pretrained Gd model")
     parser.add_argument("--isLoadD", type=str, help="None or the path for pretrained D model")
@@ -175,7 +177,7 @@ if __name__ == '__main__':
             loss_reco = MSE(ISR, IHR)
             loss_G_D = -output_fake_G_D.mean()
 
-            loss_G = loss_mmse + 1e-6 * loss_G_D + 1e-9 * loss_reco
+            loss_G = loss_mmse + args.alfa * loss_G_D + args.beda * loss_reco
             loss_G.backward()
             optimizerGu.step()  # Update Gu parameters
             optimizerGd.step()  # Update Gd parameters
