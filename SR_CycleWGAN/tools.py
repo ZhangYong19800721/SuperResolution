@@ -108,6 +108,7 @@ def ImageSuperResolution(image, G):
     with torch.no_grad():
         image_SR = G(image)
 
+    image_SR = image_SR.clamp_(0.0, 1.0)
     outputImage = ttf.to_pil_image(image_SR[0])
     return outputImage
 
