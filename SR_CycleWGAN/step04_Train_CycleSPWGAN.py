@@ -29,12 +29,14 @@ from torch.utils.tensorboard import SummaryWriter
 --NGPU=1
 --B_EPOCHS=1
 --N_EPOCHS=10000
+--alfa=1e-6
+--beda=1e-9
 --outputDir=./output
 --logDir=./logdir
 --shuffle=1
---isLoadGu=./output/20210525[11:32:25]/model_Gu_CPU.pkl
---isLoadGd=./output/20210525[11:32:25]/model_Gd_CPU.pkl
---isLoadD=./output/20210525[11:32:25]/model_D_SP_CPU.pkl
+--isLoadGu=./output/20210525[11:19:17]/model_Gu_CPU.pkl
+--isLoadGd=./output/20210525[11:19:17]/model_Gd_CPU.pkl
+--isLoadD=./output/20210525[11:19:17]/model_D_SP_CPU.pkl
 """
 
 if __name__ == '__main__':
